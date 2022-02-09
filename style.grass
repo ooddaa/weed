@@ -1,0 +1,143 @@
+﻿node {
+  diameter: 50px;
+  color: #DE9BF9;
+  border-color: #BF85D6;
+  border-width: 2px;
+  text-color-internal: #FFFFFF;
+  font-size: 10px;
+}
+relationship {
+  color: #A5ABB6;
+  shaft-width: 1px;
+  font-size: 8px;
+  padding: 3px;
+  text-color-external: #000000;
+  text-color-internal: #FFFFFF;
+  caption: "<type>";
+}
+node.Token {
+  caption: "{text}";
+  color: #F16667;
+  border-color: #eb2728;
+  text-color-internal: #FFFFFF;
+}
+node.Text {
+  caption: "{id}";
+  color: #FFC454;
+  border-color: #d7a013;
+  text-color-internal: #2A2C34;
+}
+node.Sentence {
+  caption: "{is_question}";
+  color: #8DCC93;
+  border-color: #5db665;
+  text-color-internal: #2A2C34;
+}
+node.* {
+  color: #F16667;
+  border-color: #eb2728;
+  text-color-internal: #FFFFFF;
+  defaultCaption: "<id>";
+}
+node.NamedEntity {
+  color: #D9C8AE;
+  border-color: #c0a378;
+  text-color-internal: #2A2C34;
+  caption: "{start_char}";
+}
+node.Person {
+  color: #8DCC93;
+  border-color: #5db665;
+  text-color-internal: #2A2C34;
+  caption: "{name}";
+}
+node.Node1 {
+  color: #ECB5C9;
+  border-color: #da7298;
+  text-color-internal: #2A2C34;
+  caption: "{val}";
+}
+node.Node2 {
+  color: #4C8EDA;
+  border-color: #2870c2;
+  text-color-internal: #FFFFFF;
+  caption: "{val}";
+}
+node.Node3 {
+  color: #FFC454;
+  border-color: #d7a013;
+  text-color-internal: #2A2C34;
+  caption: "{val}";
+}
+node.Node4 {
+  color: #DA7194;
+  border-color: #cc3c6c;
+  text-color-internal: #FFFFFF;
+  caption: "{val}";
+}
+node.PERSON {
+  color: #569480;
+  border-color: #447666;
+  text-color-internal: #FFFFFF;
+  caption: "{LAST_NAME}";
+}
+node.BANK {
+  caption: "{NAME}";
+}
+node.TEAM {
+  caption: "{NAME}";
+}
+node.BANK_ACCOUNT {
+  caption: "{DESCRIPTION}";
+}
+node.PROJECT {
+  caption: "{DESCRIPTION}";
+}
+node.COMPANY {
+  caption: "{NAME}";
+}
+node.TRANSACTION {
+  caption: "{CURRENCY}";
+}
+node.ID {
+  caption: "{DESCRIPTION}";
+}
+node.TRUST {
+  caption: "{NAME}";
+}
+node.LOAN {
+  caption: "{LOAN_FACILITY}";
+}
+node.INVOICE {
+  caption: "{DESCRIPTION}";
+}
+node.Cultivar {
+  caption: "{NAME}";
+  color: #569480;
+  border-color: #447666;
+  text-color-internal: #FFFFFF;
+}
+node.Product {
+  caption: "{product}";
+  color: #4C8EDA;
+  border-color: #2870c2;
+  text-color-internal: #FFFFFF;
+}
+node.Strain {
+  caption: "{NAME}";
+  color: #D9C8AE;
+  border-color: #c0a378;
+  text-color-internal: #2A2C34;
+}
+node.Form {
+  caption: "{NAME}";
+  color: #57C7E3;
+  border-color: #23b3d7;
+  text-color-internal: #2A2C34;
+}
+node.Manufacturer {
+  caption: "{NAME}";
+  color: #DA7194;
+  border-color: #cc3c6c;
+  text-color-internal: #FFFFFF;
+}

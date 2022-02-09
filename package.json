@@ -4,7 +4,7 @@
   "description": "",
   "main": "data.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --watch --runInBand"
   },
   "author": "",
   "license": "ISC",
@@ -12,5 +12,8 @@
     "lodash": "^4.17.21",
     "mango": "git+https://kenguru101@bitbucket.org/kenguru101/mango.git",
     "node-fetch": "^3.2.0"
+  },
+  "devDependencies": {
+    "jest": "^27.5.1"
   }
 }
