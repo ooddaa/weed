@@ -74,7 +74,7 @@ function formatPrice(str) /*: Object */ {
     ]
   */
   let matchedCase1 = str.match(
-    /(([0-9]*)(g|mg|ml))\s+(bottle\s+|pots\s+)?from\s+([£$])([0-9]*)/
+    /(([0-9]*)(g|mg|ml))\s+(bottle\s+|pots\s+)?from\s+([£$])([0-9]*(.[0-9]*)?)/
   );
   // log(matchedCase1);
   /* check if we can extract price as a Number */
@@ -95,17 +95,31 @@ function formatPrice(str) /*: Object */ {
 
   // CASE 2
   // £88 for 5g
-  let matchedCase2 = str.match(/(£)([0-9]*) for (([0-9]*)(g|mg))/);
+  let matchedCase2 = str.match(/(£)([0-9]*(.[0-9]*)?) for (([0-9]*)(g|mg))/);
+  // let matchedCase2 = str.match(/(£)([0-9]*) for (([0-9]*)(g|mg))/);
   /* 
-  [
-      '£88 for 5g',
-      '£',
-      '88',
-      '5g',
-      '5',
-      'g',
-      index: 0,
+    [
+      0 '£88 for 5g',
+      1 '£',
+      2 '88',
+      3 undefined,
+      4 '5g',
+      5 '5',
+      6 'g',
+      7 index: 0,
       input: '£88 for 5g',
+      groups: undefined
+    ]
+    [
+      0 '£88.99 for 5g',
+      1 '£',
+      2 '88.99',
+      3 '.99',
+      4 '5g',
+      5 '5',
+      6 'g',
+      index: 0,
+      input: '£88.99 for 5g',
       groups: undefined
     ]
   */
@@ -117,27 +131,29 @@ function formatPrice(str) /*: Object */ {
       totalPrice: Number(matchedCase2[2]) || null,
       currency: currencies[matchedCase2[1]] || null,
       currencySymbol: matchedCase2[1] || null,
-      productTotalAmount: matchedCase2[3] || null,
-      productQuantity: !isNaN(matchedCase2[4]) ? Number(matchedCase2[4]) : null,
-      productMeasurementUnit: matchedCase2[5] || null,
+      productTotalAmount: matchedCase2[4] || null,
+      productQuantity: !isNaN(matchedCase2[5]) ? Number(matchedCase2[5]) : null,
+      productMeasurementUnit: matchedCase2[6] || null,
       productPackaging: null,
     };
   }
 
   // CASE 3
-  // 60 capsules from £169
-  let matchedCase3 = str.match(/([0-9]*) (capsules) from ([£$])([0-9]*)/);
+  // 60 capsules from £169 | 60 capsules from £169.99
+  let matchedCase3 = str.match(
+    /([0-9]*) (capsules) from ([£$])([0-9]*(.[0-9]*)?)/
+  );
   /* 
-  [
-      0 '60 capsules from £169',
-      1 '60',
-      2 'capsules',
-      3 '£',
-      4 '169',
-      index: 0,
-      input: '60 capsules from £169',
-      groups: undefined
-    ]
+    [
+        0 '60 capsules from £169',
+        1 '60',
+        2 'capsules',
+        3 '£',
+        4 '169',
+        index: 0,
+        input: '60 capsules from £169',
+        groups: undefined
+      ]
   */
   // log(matchedCase3);
   if (matchedCase3 != null && !isNaN(matchedCase3[4])) {
@@ -155,8 +171,8 @@ function formatPrice(str) /*: Object */ {
   }
 
   // CASE 4
-  // £199
-  let matchedCase4 = str.match(/([£$])([0-9]*)/);
+  // £199 | £199.99
+  let matchedCase4 = str.match(/([£$])([0-9]*(.[0-9]*)?)/);
   // log(matchedCase4);
   /* [ 
     0 '£199', 
@@ -203,9 +219,9 @@ describe("should find delimiters", () => {
 });
 
 describe("should extract price per quantity", () => {
-  test("fails", () => {
+  test("nothing", () => {
     // privateprescriptionpricingapprox: "50ml bottle from £175",
-    const input = "fails";
+    const input = "";
     const result = parsePrice(input);
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
@@ -236,6 +252,22 @@ describe("should extract price per quantity", () => {
       productPackaging: null,
     });
   });
+  test("£199.99", () => {
+    const input = "£199.99";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: input,
+      totalPrice: 199.99,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: null,
+      productQuantity: null,
+      productMeasurementUnit: null,
+      productPackaging: null,
+    });
+  });
 
   test("50ml bottle from £175", () => {
     // privateprescriptionpricingapprox: "50ml bottle from £175",
@@ -252,6 +284,23 @@ describe("should extract price per quantity", () => {
       productQuantity: 50,
       productMeasurementUnit: "ml",
       productPackaging: "bottle",
+    });
+  });
+
+  test("40ml from £162.50", () => {
+    const input = "40ml from £162.50";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: input,
+      totalPrice: 162.5,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "40ml",
+      productQuantity: 40,
+      productMeasurementUnit: "ml",
+      productPackaging: null,
     });
   });
 
@@ -273,6 +322,23 @@ describe("should extract price per quantity", () => {
     });
   });
 
+  test("10g from £85.50", () => {
+    const input = "10g from £85.99";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: input,
+      totalPrice: 85.99,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "10g",
+      productQuantity: 10,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+  });
+
   test("£88 for 5g", () => {
     // privateprescriptionpricingapprox: "£88 for 5g",
     const input = "£88 for 5g";
@@ -282,6 +348,23 @@ describe("should extract price per quantity", () => {
     expect(result[0]).toMatchObject({
       sourceStr: "£88 for 5g",
       totalPrice: 88,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "5g",
+      productQuantity: 5,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+  });
+  test("£88.99 for 5g", () => {
+    // privateprescriptionpricingapprox: "£88 for 5g",
+    const input = "£88.99 for 5g";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: "£88.99 for 5g",
+      totalPrice: 88.99,
       currency: "GBP",
       currencySymbol: "£",
       productTotalAmount: "5g",
@@ -379,8 +462,8 @@ describe("should extract price per quantity", () => {
     });
   });
 
-  test("30 capsules from £125 - 60 capsules from £169", () => {
-    const input = "30 capsules from £125 - 60 capsules from £169";
+  test("30 capsules from £125 - 60 capsules from £169.99", () => {
+    const input = "30 capsules from £125 - 60 capsules from £169.99";
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
@@ -396,8 +479,8 @@ describe("should extract price per quantity", () => {
       productPackaging: "capsules",
     });
     expect(result[1]).toMatchObject({
-      sourceStr: "60 capsules from £169",
-      totalPrice: 169,
+      sourceStr: "60 capsules from £169.99",
+      totalPrice: 169.99,
       currency: "GBP",
       currencySymbol: "£",
       productTotalAmount: "60",
