@@ -15,10 +15,23 @@ function parsePrice(str) /*: Object[] */ {
     throw new Error("parsePrice: the first argument must be a string.");
   }
   // test how many prices are there in the string
-  let howMany = str.match(/\r/g);
-  // log(howMany);
-  return str.split(/\r/).map(formatPrice);
+
+  // "£88 for 5g\r£176 for 20g\r£212 for 30g"
+  let ret = /\r/;
+  if (str.match(ret) !== null) {
+    // log("ret matched");
+    return str.split(ret).map(formatPrice);
+  }
+
+  // "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350"
+  let dashes = /\s-\s/;
+  if (str.match(dashes) !== null) {
+    // log("dashes matched");
+    return str.split(dashes).map(formatPrice);
+  }
+  return [str].map(formatPrice);
 }
+
 function formatPrice(str) /*: Object */ {
   /* set all to null for default case */
   let totalPrice =
@@ -31,7 +44,7 @@ function formatPrice(str) /*: Object */ {
       null);
 
   // CASE 1
-  // 50ml bottle from £175 | 10g from £85
+  // 50ml bottle from £175 | 10g pots from £125 | 10g from £85
   // let matchedCase1 = str.match(/([£$])([0-9]*)/);
   /* 
   [
@@ -58,9 +71,21 @@ function formatPrice(str) /*: Object */ {
       input: '10g from £85',
       groups: undefined
     ]
+    [
+      '10g pots from £125',
+      '10g',
+      '10',
+      'g',
+      'pots ',
+      '£',
+      '125',
+      index: 0,
+      input: '10g pots from £125',
+      groups: undefined
+    ]
   */
   let matchedCase1 = str.match(
-    /(([0-9]*)(g|mg|ml))\s+(bottle\s+)?from\s+([£$])([0-9]*)/
+    /(([0-9]*)(g|mg|ml))\s+(bottle\s+|pots\s+)?from\s+([£$])([0-9]*)/
   );
   // log(matchedCase1);
   /* check if we can extract price as a Number */
@@ -115,6 +140,19 @@ function formatPrice(str) /*: Object */ {
     productPackaging,
   };
 }
+
+describe("should find delimiters", () => {
+  test("/r", () => {
+    const input = "£88 for 5g\r£176 for 20g\r£212 for 30g";
+    expect(input.match(/\r/g)).toEqual(["\r", "\r"]);
+    expect(input.match(/\s-\s/g)).toEqual(null);
+  });
+  test(" - ", () => {
+    const input =
+      "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350";
+    expect(input.match(/\s-\s/g)).toEqual([" - ", " - ", " - "]);
+  });
+});
 
 describe("should extract price per quantity", () => {
   test("fails", () => {
@@ -218,6 +256,55 @@ describe("should extract price per quantity", () => {
     expect(result[2]).toMatchObject({
       sourceStr: "£212 for 30g",
       totalPrice: 212,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "30g",
+      productQuantity: 30,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+  });
+
+  test("5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350", () => {
+    const input =
+      "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result).toHaveLength(4);
+    expect(result[0]).toMatchObject({
+      sourceStr: "5g pots from £70",
+      totalPrice: 70,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "5g",
+      productQuantity: 5,
+      productMeasurementUnit: "g",
+      productPackaging: "pots",
+    });
+    expect(result[1]).toMatchObject({
+      sourceStr: "10g pots from £125",
+      totalPrice: 125,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "10g",
+      productQuantity: 10,
+      productMeasurementUnit: "g",
+      productPackaging: "pots",
+    });
+    expect(result[2]).toMatchObject({
+      sourceStr: "20g from £240",
+      totalPrice: 240,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "20g",
+      productQuantity: 20,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+    expect(result[3]).toMatchObject({
+      sourceStr: "30g from £350",
+      totalPrice: 350,
       currency: "GBP",
       currencySymbol: "£",
       productTotalAmount: "30g",
