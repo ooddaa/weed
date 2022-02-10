@@ -33,19 +33,8 @@ function parsePrice(str) /*: Object[] */ {
 }
 
 function formatPrice(str) /*: Object */ {
-  /* set all to null for default case */
-  let totalPrice =
-    (currency =
-    currencySymbol =
-    productTotalAmount =
-    productMeasurementUnit =
-    productQuantity =
-    productPackaging =
-      null);
-
   // CASE 1
   // 50ml bottle from £175 | 10g pots from £125 | 10g from £85
-  // let matchedCase1 = str.match(/([£$])([0-9]*)/);
   /* 
   [
       '50ml bottle from £175',
@@ -91,14 +80,17 @@ function formatPrice(str) /*: Object */ {
   /* check if we can extract price as a Number */
   if (matchedCase1 != null && !isNaN(matchedCase1[6])) {
     // log("matchedCase1");
-    currencySymbol = matchedCase1[5] || null;
-    currency = currencies[currencySymbol] || null;
-    totalPrice = Number(matchedCase1[6]) || null;
-    productTotalAmount = matchedCase1[1] || null;
-    productQuantity = !isNaN(matchedCase1[2]) ? Number(matchedCase1[2]) : null;
-    productMeasurementUnit = matchedCase1[3];
-    productPackaging =
-      typeof matchedCase1[4] == "string" ? matchedCase1[4].trim() : null;
+    return {
+      sourceStr: str,
+      totalPrice: Number(matchedCase1[6]) || null,
+      currency: currencies[matchedCase1[5]] || null,
+      currencySymbol: matchedCase1[5] || null,
+      productTotalAmount: matchedCase1[1] || null,
+      productQuantity: !isNaN(matchedCase1[2]) ? Number(matchedCase1[2]) : null,
+      productMeasurementUnit: matchedCase1[3],
+      productPackaging:
+        typeof matchedCase1[4] == "string" ? matchedCase1[4].trim() : null,
+    };
   }
 
   // CASE 2
@@ -120,13 +112,16 @@ function formatPrice(str) /*: Object */ {
   // log(matchedCase2);
   if (matchedCase2 != null && !isNaN(matchedCase2[2])) {
     // log("matchedCase2");
-    currencySymbol = matchedCase2[1] || null;
-    currency = currencies[currencySymbol] || null;
-    totalPrice = Number(matchedCase2[2]) || null;
-    productTotalAmount = matchedCase2[3] || null;
-    productQuantity = !isNaN(matchedCase2[4]) ? Number(matchedCase2[4]) : null;
-    productMeasurementUnit = matchedCase2[5] || null;
-    productPackaging = null;
+    return {
+      sourceStr: str,
+      totalPrice: Number(matchedCase2[2]) || null,
+      currency: currencies[matchedCase2[1]] || null,
+      currencySymbol: matchedCase2[1] || null,
+      productTotalAmount: matchedCase2[3] || null,
+      productQuantity: !isNaN(matchedCase2[4]) ? Number(matchedCase2[4]) : null,
+      productMeasurementUnit: matchedCase2[5] || null,
+      productPackaging: null,
+    };
   }
 
   // CASE 3
@@ -147,23 +142,50 @@ function formatPrice(str) /*: Object */ {
   // log(matchedCase3);
   if (matchedCase3 != null && !isNaN(matchedCase3[4])) {
     // log("matchedCase3");
-    currencySymbol = matchedCase3[3] || null;
-    currency = currencies[currencySymbol] || null;
-    totalPrice = Number(matchedCase3[4]) || null;
-    productTotalAmount = matchedCase3[1] || null;
-    productQuantity = !isNaN(matchedCase3[1]) ? Number(matchedCase3[1]) : null;
-    productMeasurementUnit = null;
-    productPackaging = matchedCase3[2];
+    return {
+      sourceStr: str,
+      totalPrice: Number(matchedCase3[4]) || null,
+      currencySymbol: matchedCase3[3] || null,
+      currency: currencies[matchedCase3[3]] || null,
+      productTotalAmount: matchedCase3[1] || null,
+      productQuantity: !isNaN(matchedCase3[1]) ? Number(matchedCase3[1]) : null,
+      productMeasurementUnit: null,
+      productPackaging: matchedCase3[2],
+    };
   }
+
+  // CASE 4
+  // £199
+  let matchedCase4 = str.match(/([£$])([0-9]*)/);
+  // log(matchedCase4);
+  /* [ 
+    0 '£199', 
+    1 '£', 
+    2 '199', 
+    index: 0, input: '£199', groups: undefined ] */
+  if (matchedCase4 != null && !isNaN(matchedCase4[2])) {
+    // log("matchedCase4");
+    return {
+      sourceStr: str,
+      totalPrice: Number(matchedCase4[2]) || null,
+      currencySymbol: matchedCase4[1] || null,
+      currency: currencies[matchedCase4[1]] || null,
+      productTotalAmount: null,
+      productQuantity: null,
+      productMeasurementUnit: null,
+      productPackaging: null,
+    };
+  }
+
   return {
     sourceStr: str,
-    totalPrice,
-    currency,
-    currencySymbol,
-    productTotalAmount,
-    productQuantity,
-    productMeasurementUnit,
-    productPackaging,
+    totalPrice: null,
+    currency: null,
+    currencySymbol: null,
+    productTotalAmount: null,
+    productQuantity: null,
+    productMeasurementUnit: null,
+    productPackaging: null,
   };
 }
 
@@ -194,6 +216,23 @@ describe("should extract price per quantity", () => {
       productTotalAmount: null,
       productMeasurementUnit: null,
       productQuantity: null,
+      productPackaging: null,
+    });
+  });
+
+  test("£199", () => {
+    const input = "£199";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: input,
+      totalPrice: 199,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: null,
+      productQuantity: null,
+      productMeasurementUnit: null,
       productPackaging: null,
     });
   });
