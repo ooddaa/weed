@@ -14,6 +14,7 @@ function parsePrice(str) /*: Object[] */ {
   if (typeof str !== "string") {
     throw new Error("parsePrice: the first argument must be a string.");
   }
+
   // test how many prices are there in the string
 
   // "£88 for 5g\r£176 for 20g\r£212 for 30g"
@@ -29,6 +30,16 @@ function parsePrice(str) /*: Object[] */ {
     // log("dashes matched");
     return str.split(dashes).map(formatPrice);
   }
+
+  // "£75 for 10g£150 for 20g£225 for 30g"
+  if (str.match(/\w£\b/g) !== null) {
+    const result = str
+      .split(/£\b/)
+      .filter((x) => x)
+      .map((str) => "£" + str);
+    return result.map(formatPrice);
+  }
+
   return [str].map(formatPrice);
 }
 
@@ -211,18 +222,39 @@ describe("should find delimiters", () => {
     expect(input.match(/\r/g)).toEqual(["\r", "\r"]);
     expect(input.match(/\s-\s/g)).toEqual(null);
   });
+
   test(" - ", () => {
     const input =
       "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350";
     expect(input.match(/\s-\s/g)).toEqual([" - ", " - ", " - "]);
   });
+
+  test("10g£150", () => {
+    const input = "£75 for 10g£150 for 20g£225 for 30g";
+    const input2 =
+      "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350";
+    const pattern = /\w£\b/g;
+
+    expect(input.match(pattern)).toEqual(["g£", "g£"]);
+    expect(input2.match(pattern)).toEqual(null);
+  });
+
+  test("clean £", () => {
+    const input = "£75 for 10g£150 for 20g£225 for 30g";
+    const result = input
+      .split(/£\b/)
+      .filter((x) => x)
+      .map((str) => "£" + str);
+
+    expect(result).toEqual(["£75 for 10g", "£150 for 20g", "£225 for 30g"]);
+  });
 });
 
 describe("should extract price per quantity", () => {
   test("nothing", () => {
-    // privateprescriptionpricingapprox: "50ml bottle from £175",
     const input = "";
     const result = parsePrice(input);
+
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
       sourceStr: input,
@@ -252,6 +284,7 @@ describe("should extract price per quantity", () => {
       productPackaging: null,
     });
   });
+
   test("£199.99", () => {
     const input = "£199.99";
     const result = parsePrice(input);
@@ -270,7 +303,6 @@ describe("should extract price per quantity", () => {
   });
 
   test("50ml bottle from £175", () => {
-    // privateprescriptionpricingapprox: "50ml bottle from £175",
     const input = "50ml bottle from £175";
     const result = parsePrice(input);
 
@@ -305,7 +337,6 @@ describe("should extract price per quantity", () => {
   });
 
   test("10g from £85", () => {
-    // privateprescriptionpricingapprox: "10g from £85",
     const input = "10g from £85";
     const result = parsePrice(input);
 
@@ -340,7 +371,6 @@ describe("should extract price per quantity", () => {
   });
 
   test("£88 for 5g", () => {
-    // privateprescriptionpricingapprox: "£88 for 5g",
     const input = "£88 for 5g";
     const result = parsePrice(input);
 
@@ -356,8 +386,8 @@ describe("should extract price per quantity", () => {
       productPackaging: null,
     });
   });
+
   test("£88.99 for 5g", () => {
-    // privateprescriptionpricingapprox: "£88 for 5g",
     const input = "£88.99 for 5g";
     const result = parsePrice(input);
 
@@ -369,6 +399,45 @@ describe("should extract price per quantity", () => {
       currencySymbol: "£",
       productTotalAmount: "5g",
       productQuantity: 5,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+  });
+
+  test("£75 for 10g£150 for 20g£225 for 30g", () => {
+    // privateprescriptionpricingapprox: "£88 for 5g",
+    const input = "£75 for 10g£150 for 20g£225 for 30g";
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result).toHaveLength(3);
+    expect(result[0]).toMatchObject({
+      sourceStr: "£75 for 10g",
+      totalPrice: 75,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "10g",
+      productQuantity: 10,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+    expect(result[1]).toMatchObject({
+      sourceStr: "£150 for 20g",
+      totalPrice: 150,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "20g",
+      productQuantity: 20,
+      productMeasurementUnit: "g",
+      productPackaging: null,
+    });
+    expect(result[2]).toMatchObject({
+      sourceStr: "£225 for 30g",
+      totalPrice: 225,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "30g",
+      productQuantity: 30,
       productMeasurementUnit: "g",
       productPackaging: null,
     });
