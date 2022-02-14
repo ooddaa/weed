@@ -1,21 +1,7 @@
-// import { Engine, Builder, log, isFailure, Mango } from "mango";
-// import pkg from "mango";
-const pkg = require("mango");
-const { Engine, Builder, log, isFailure, Mango } = pkg;
-// import { Engine, Builder, log, isFailure } from "../mango/lib/index.js";
-// import { Engine, Builder, log, isFailure } from "../mango/src/index.js";
-// import pkg from "../mango/src/index.js";
-// const { Engine, Builder, log, isFailure } = pkg;
-// import _ from "../mango/node_modules/lodash/lodash.js";
-const _ = require("lodash");
-// import _ from "lodash/has";
-// import * as dg from "./datasets/220209_dg.js";
-// import ipc from "./datasets/220209_ipc.js";
-// import parsers from "./parsers.js";
-const parsers = require("./parsers.js");
-// const { parsePrice } = require("./parsers.js");
-const { has } = _;
-const { parsePrice } = parsers;
+const { Engine, Builder, log, isFailure, Mango } = require("mango");
+const { has, flatten } = require("lodash");
+const { parsePrice } = require("./parsers.js");
+
 
 /* Instantiate Engine */
 const engine = new Engine({
@@ -33,14 +19,7 @@ engine.startDriver();
 engine.verifyConnectivity({ database: "neo4j" }).then(log);
 
 const builder = new Builder();
-log(Mango);
 const mango = new Mango({ builder, engine });
-
-// async function addProduct(product) {
-//   const node = builder.makeNode(["Product", "Oil"], product);
-//   const result = await engine.mergeNodes([node]);
-//   return result;
-// }
 
 async function worker(data) {
   const nodes = data.map((product) => {
@@ -97,9 +76,13 @@ function pickCultivar({ cultivar }) /* : Node */ {
   return node;
 }
 
-function createManufacturer({ product }) /* : Node */ {
+function createManufacturer(product) /* : Node */ {
   // parse 'Khiron THC Rich'
-  const [name, ...rest] = product.split(" ");
+  /**
+   * @TODO write choseManufacturer(product) that intelligently matches manufacturer
+   * mb even should consult KnowlegeBase
+   */
+  const [name, ...rest] = product["product"].split(" ");
   return builder.makeNode(["Manufacturer"], { NAME: name });
 }
 
@@ -125,8 +108,8 @@ function extractPrices(product) /* : RelationshipCandidate[] */ {
   });
 }
 
-function pickDispensary({ dispensary }) {
-  return builder.makeNode(["Dispensary"], { NAME: dispensary });
+function pickDispensary(product) {
+  return builder.makeNode(["Dispensary"], { NAME: product.dispensary });
 }
 
 function productToEnode(product) {
@@ -177,7 +160,7 @@ function productToEnode(product) {
   return newEnode;
 }
 
-// worker2(getData()).then(log);
+
 
 const manufacturers = {
   Bedrocan: ["Bedrobinol", "Bedrocan", "Bedrolite", "Bedica"],
@@ -304,22 +287,37 @@ async function bedrocan() {
 }
 // bedrocan();
 
+async function findProduct(name) {
+  return await mango.findNode(["Product"], { NAME: name })
+}
+async function findManufacturer(name) {
+  return await mango.findNode(["Manufacturer"], { NAME: name })
+}
+
 async function bedrocan2() {
   /* Solving Bedrocan Product vs Manufacturer fail */
   /* make sure Bedrocan:Manufacturer exists */
-  // const bedrocan/* : Node */ = await mango.buildAndMerge(["Manufacturer"], { NAME: "Bedrocan"});
+  const bedrocan/* : Node */ = await mango.buildAndMergeNode(["Manufacturer"], { NAME: "Bedrocan"});
 
   /* we have a list of Products that Bedrocan makes, we want them to have MADE_BY relationships */
-  const products = ["Bedrobinol", "Bediol", "Bedrocan", "Bedrolite", "Bedica"];
-
-  const made_by_rels /* : Relationship[] */ = [];
+  const products /* : EnhancedNode[] */ = flatten(await Promise.all(["Bedrobinol", "Bediol", "Bedrocan", "Bedrolite", "Bedica"].map(findProduct)))
+  
   for await (let product of products) {
-    log(product);
+    
+    let rel = await mango.buildAndMergeRelationship(
+      product,
+      [["MADE_BY"], "required", { descr: `(Product { NAME: '${product.properties["NAME"]}' })-[:MADE_BY]->(Manufacturer { NAME: 'Bedrocan' })` }],
+      bedrocan,
+    )
   }
-  // await mango.buildAndMergeRelationship()
-}
+  
+  // delete wrong Manufacturers
+  const manufacturers /* : EnhancedNode[] */ = flatten(await Promise.all(["Bedrobinol", "Bediol", "Bedrolite", "Bedica"].map(findManufacturer)))
 
-bedrocan2();
+  await engine.deleteNodes(manufacturers)
+}
+// worker2(getData()).then(log);
+// bedrocan2();
 /**
  * I need a simple tool to take any POJO and turn it into a EnhancedNode.
  */
