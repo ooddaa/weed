@@ -1,7 +1,14 @@
-const { Engine, Builder, log, isFailure, Mango } = require("mango");
+// const { Engine, Builder, log, isFailure, Mango, search } = require("mango");
+const {
+  Engine,
+  Builder,
+  log,
+  isFailure,
+  Mango,
+  search,
+} = require("../mango/lib/index.js");
 const { has, flatten } = require("lodash");
 const { parsePrice } = require("./parsers.js");
-
 
 /* Instantiate Engine */
 const engine = new Engine({
@@ -160,8 +167,6 @@ function productToEnode(product) {
   return newEnode;
 }
 
-
-
 const manufacturers = {
   Bedrocan: ["Bedrobinol", "Bedrocan", "Bedrolite", "Bedica"],
 };
@@ -288,36 +293,82 @@ async function bedrocan() {
 // bedrocan();
 
 async function findProduct(name) {
-  return await mango.findNode(["Product"], { NAME: name })
+  return await mango.findNode(["Product"], { NAME: name });
+}
+async function findProduct1(props) {
+  return await mango.findNode(["Product"], props);
 }
 async function findManufacturer(name) {
-  return await mango.findNode(["Manufacturer"], { NAME: name })
+  return await mango.findNode(["Manufacturer"], { NAME: name });
+}
+async function findManufacturer1(props) {
+  return await mango.findNode(["Manufacturer"], { NAME: name });
 }
 
 async function bedrocan2() {
   /* Solving Bedrocan Product vs Manufacturer fail */
   /* make sure Bedrocan:Manufacturer exists */
-  const bedrocan/* : Node */ = await mango.buildAndMergeNode(["Manufacturer"], { NAME: "Bedrocan"});
+  const bedrocan /* : Node */ = await mango.buildAndMergeNode(
+    ["Manufacturer"],
+    { NAME: "Bedrocan" }
+  );
 
   /* we have a list of Products that Bedrocan makes, we want them to have MADE_BY relationships */
-  const products /* : EnhancedNode[] */ = flatten(await Promise.all(["Bedrobinol", "Bediol", "Bedrocan", "Bedrolite", "Bedica"].map(findProduct)))
-  
-  for await (let product of products) {
-    
-    let rel = await mango.buildAndMergeRelationship(
-      product,
-      [["MADE_BY"], "required", { descr: `(Product { NAME: '${product.properties["NAME"]}' })-[:MADE_BY]->(Manufacturer { NAME: 'Bedrocan' })` }],
-      bedrocan,
-    )
-  }
-  
-  // delete wrong Manufacturers
-  const manufacturers /* : EnhancedNode[] */ = flatten(await Promise.all(["Bedrobinol", "Bediol", "Bedrolite", "Bedica"].map(findManufacturer)))
 
-  await engine.deleteNodes(manufacturers)
+  async function findNodes(names, fn) {
+    return flatten(await Promise.all(names.map(fn)));
+  }
+
+  // const products = await findNodes(
+  //   ["Bedrobinol", "Bediol", "Bedrocan", "Bedrolite", "Bedica"],
+  //   findProduct
+  // );
+
+  // log(products);
+
+  // const products = await findNodes(
+  //   [{ /* NAME: "Bediol", */ FORM: "Granulated Flower" }],
+  //   findProduct1
+  // );
+  const products = await findNodes(
+    [
+      {
+        // NAME: search("~", "Bed"),
+        NAME: search("~", ["lite", "can", "Flos"]), // match (p:Product) where p.NAME CONTAINS 'lite' OR p.NAME CONTAINS 'can' return p
+        // NAME: search("contains", ["lite", "can", "Flos"]), // match (p:Product) where p.NAME CONTAINS 'lite' OR p.NAME CONTAINS 'can' return p
+        // FORM: "Granulated Flower",
+      },
+    ],
+    findProduct1
+  );
+
+  // log(products);
+
+  // for await (let product of products) {
+  //   let rel = await mango.buildAndMergeRelationship(
+  //     product,
+  //     [
+  //       ["MADE_BY"],
+  //       "required",
+  //       {
+  //         descr: `(Product { NAME: '${product.properties["NAME"]}' })-[:MADE_BY]->(Manufacturer { NAME: 'Bedrocan' })`,
+  //       },
+  //     ],
+  //     bedrocan
+  //   );
+  // }
+
+  // // delete wrong Manufacturers
+  // const manufacturers /* : EnhancedNode[] */ = flatten(
+  //   await Promise.all(
+  //     ["Bedrobinol", "Bediol", "Bedrolite", "Bedica"].map(findManufacturer)
+  //   )
+  // );
+
+  // await engine.deleteNodes(manufacturers);
 }
 // worker2(getData()).then(log);
-// bedrocan2();
+bedrocan2();
 /**
  * I need a simple tool to take any POJO and turn it into a EnhancedNode.
  */
