@@ -209,6 +209,33 @@ function formatPrice(str) /*: Object */ {
   };
 }
 
+/**
+ * entity resolution module
+ * @param {*} name 
+ * @param {*} kb 
+ * @returns 
+ */
+function processName(name, kb)/* : String[] | Array<null> */ {
+  const rv = kb.map(({ preferredName, aliases }) => {
+      const matches = []
+      aliases.forEach((alias) => {
+          const pattern = new RegExp(name, 'i')
+          if (pattern.test(alias)) {
+              matches.push(true)
+          } else {
+              matches.push(false)
+          }
+      })
+      return matches.includes(true) ? preferredName : null
+  })
+  const result = rv.filter(x => x)
+  if (result.length == 0) {
+    return [name]
+  } else {
+    return result
+  }
+}
+
 // export default { parsePrice, formatPrice };
-module.exports = { parsePrice, formatPrice };
+module.exports = { parsePrice, formatPrice, processName };
 // module.exports = parsePrice;

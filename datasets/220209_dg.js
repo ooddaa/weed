@@ -1,22 +1,5 @@
-[
-  {
-    product: "Flowers",
-    form: "",
-    strain: "",
-    cultivar: "",
-    thc: "",
-    cbd: "",
-    size: "",
-    privateprescriptionpricingapprox: "",
-    availableonprojecttwenty21: "",
-    productsize: "",
-    monthlyamountcappedat15: "",
-    pharmacyt21: "",
-    notes: "",
-    levelsinstockuk: "",
-    atpharmacy: "",
-    moreinformationreviews: null,
-  },
+module.exports = [
+
   {
     product: "420 Natural 18/1",
     form: "Whole Flower",
