@@ -8,7 +8,9 @@ const {
   search,
 } = require("../mango/lib/index.js");
 const { has, flatten } = require("lodash");
-const { parsePrice } = require("./parsers.js");
+const { parsePrice, processName } = require("./parsers.js");
+const dg = require('./datasets/220209_dg')
+const ipc = require('./datasets/220209_ipc')
 
 /* Instantiate Engine */
 const engine = new Engine({
@@ -89,8 +91,27 @@ function createManufacturer(product) /* : Node */ {
    * @TODO write choseManufacturer(product) that intelligently matches manufacturer
    * mb even should consult KnowlegeBase
    */
+   const kb = [
+    { pattern: new RegExp('tilray', 'i'), preferredName: 'Tilray', aliases: ['Tilray', 'TILRAY'] },
+    { pattern: new RegExp('aurora', 'i'), preferredName: 'Aurora', aliases: ['Aurora', "PEDANIOS"] },
+    { pattern: new RegExp('columbia', 'i'), preferredName: 'Columbia Care', aliases: ['Columbia', 'Columbia Care', 'COLUMBIA'] },
+    { pattern: new RegExp('bedrocan', 'i'), preferredName: 'Bedrocan', aliases: ['Bedrocan', 'BEDROCAN', ] },
+    { pattern: new RegExp('bedrolite', 'i'), preferredName: 'Bedrocan', aliases: ['bedrolite'] },
+    { pattern: new RegExp('bediol', 'i'), preferredName: 'Bedrocan', aliases: ['bediol'] },
+    { pattern: new RegExp('bedrobinol', 'i'), preferredName: 'Bedrocan', aliases: ['bedrobinol'] },
+    { pattern: new RegExp('bedica', 'i'), preferredName: 'Bedrocan', aliases: ['bedica'] },
+  ]
+
   const [name, ...rest] = product["product"].split(" ");
-  return builder.makeNode(["Manufacturer"], { NAME: name });
+  const [preferredName] = processName(name, kb) // entity resolution module
+  
+  return builder.makeNode(["Manufacturer"], { NAME: preferredName });
+}
+
+function createProductBrand(product) /* : Node */ {
+  // parse product Name 'Khiron THC Rich'
+  const [name, ...rest] = product["product"].split(" ");
+  return builder.makeNode(["ProductBrand"], { NAME: name });
 }
 
 function pickForm({ form }) /* : Node */ {
@@ -116,7 +137,7 @@ function extractPrices(product) /* : RelationshipCandidate[] */ {
 }
 
 function pickDispensary(product) {
-  return builder.makeNode(["Dispensary"], { NAME: product.dispensary });
+  return builder.makeNode(["Dispensary"], { NAME: product.dispensary || 'UNKNOWN' });
 }
 
 function productToEnode(product) {
@@ -319,125 +340,27 @@ async function bedrocan2() {
     return flatten(await Promise.all(names.map(fn)));
   }
 
-  // const products = await findNodes(
-  //   ["Bedrobinol", "Bediol", "Bedrocan", "Bedrolite", "Bedica"],
-  //   findProduct
-  // );
-
-  // log(products);
-
-  // const products = await findNodes(
-  //   [{ /* NAME: "Bediol", */ FORM: "Granulated Flower" }],
-  //   findProduct1
-  // );
-  const products = await findNodes(
-    [
-      {
-        // NAME: search("~", "Bed"),
-        NAME: search("~", ["lite", "can", "Flos"]), // match (p:Product) where p.NAME CONTAINS 'lite' OR p.NAME CONTAINS 'can' return p
-        // NAME: search("contains", ["lite", "can", "Flos"]), // match (p:Product) where p.NAME CONTAINS 'lite' OR p.NAME CONTAINS 'can' return p
-        // FORM: "Granulated Flower",
-      },
-    ],
-    findProduct1
-  );
-
-  // log(products);
-
-  // for await (let product of products) {
-  //   let rel = await mango.buildAndMergeRelationship(
-  //     product,
-  //     [
-  //       ["MADE_BY"],
-  //       "required",
-  //       {
-  //         descr: `(Product { NAME: '${product.properties["NAME"]}' })-[:MADE_BY]->(Manufacturer { NAME: 'Bedrocan' })`,
-  //       },
-  //     ],
-  //     bedrocan
-  //   );
-  // }
-
-  // // delete wrong Manufacturers
-  // const manufacturers /* : EnhancedNode[] */ = flatten(
-  //   await Promise.all(
-  //     ["Bedrobinol", "Bediol", "Bedrolite", "Bedica"].map(findManufacturer)
-  //   )
-  // );
-
-  // await engine.deleteNodes(manufacturers);
+  // await engine.deleteNodes(manufacturers)
+  for await (let manufacturer of manufacturers) {
+    let rv = await mango.deleteNode(manufacturer)
+    log(rv)
+  }
 }
-// worker2(getData()).then(log);
-bedrocan2();
-/**
- * I need a simple tool to take any POJO and turn it into a EnhancedNode.
- */
-const item = {
-  was: {
-    product: "Noidecs T10:C15 Cannabis Oil",
-    form: "Full Spectrum Oil",
-    strain: "Sativa",
-    cultivar: "N/A",
-    thc: "10 mg/ml",
-    cbd: "15 mg/ml",
-    size: "50ml",
-    privateprescriptionpricingapprox: "50ml bottle from £175",
-    availableonprojecttwenty21: "Yes",
-    productsize: "50ml bottle",
-    monthlyamountcappedat15: "upto 50ml",
-    pharmacyt21: "Dispensary Green",
-    notes: "",
-    levelsinstockuk: "Out Of Stock",
-    atpharmacy: "No",
-    moreinformationreviews: null,
-    dispensary: "dg",
-  },
-  now: {
-    product: "Noidecs T10:C15 Cannabis Oil",
-    // product: extendOut(['Product'], { NAME: "Noidecs T10:C15 Cannabis Oil" }),
 
-    form: "Full Spectrum Oil",
-    // form: OutboundRelationship(['HAS_FORM'], { labels: ['Product'], NAME: "Full Spectrum Oil" }),
 
-    /* déjà vu 👾  */
-    // form: OutboundRelationship({
-    //   type: ['HAS_FORM'],
-    //   // props: {},
-    //   endNode: { labels: ['Product'], NAME: "Full Spectrum Oil" }
-    // }),
+worker2(getData(dg)).then(() => {
+  worker2(getData(ipc)).then(() =>{
+    bedrocan2()
+  })
+})
+// worker2(getData(dg))
+// worker2(getData(ipc))
+// bedrocan2();
 
-    form: {
-      rel: [
-        ["HAS_FORM"], // type
-        "outbound", // direction
-        {}, // props
-      ],
-      endNode: [
-        ["Product"], // labels
-        { NAME: "Full Spectrum Oil" }, // required props
-        {}, // optional props
-      ],
-    },
-
-    strain: "Sativa",
-    cultivar: "N/A",
-    thc: "10 mg/ml",
-    cbd: "15 mg/ml",
-    size: "50ml",
-    privateprescriptionpricingapprox: "50ml bottle from £175",
-    availableonprojecttwenty21: "Yes",
-    productsize: "50ml bottle",
-    monthlyamountcappedat15: "upto 50ml",
-    pharmacyt21: "Dispensary Green",
-    notes: "",
-    levelsinstockuk: "Out Of Stock",
-    atpharmacy: "No",
-    moreinformationreviews: null,
-    dispensary: "dg",
-  },
-};
-
-function getData() {
+function getData(dataset) {
+  return dataset
+}
+function getData1() {
   return [
     {
       product: "420 Natural 18/1",
@@ -660,3 +583,47 @@ function getData() {
     },
   ];
 }
+
+function updateManufacturers() {
+  /* Take existing KG and update Manufacturers with this info */
+  /* Assume that all manufacturers already have proper _hash, => new props must be optional? */
+  /* or if we consider new props REQUIRED, then we need to recalculate hashes */
+  /* we don't really need any more REQUIRED props as long as each Manufacturer is already unique by NAME */
+  
+  const legalPersons = [
+    { NAME: 'Aurora', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.auroramedicine.com'], aliases: ['Aurora Deutschland'], associatedEntities: ['Pedanios'] },
+    { NAME: 'Cellen', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.cellenhealth.com/'], aliases: ['Aurora Deutschland'], associatedEntities: ['Cellen Therapeutics', "Leva Clinic"], addresses: ['Cannon Place, 78 Cannon Street, London, United Kingdom, EC4N 6AF'] },
+    { NAME: 'Leva Clinic', _label: ['Dispensary', 'Clinic', 'LegalPerson'], links: ['https://www.levaclinic.com/'], aliases: ['Leva'], associatedEntities: ['Cellen'] },
+
+    { NAME: 'Khiron', _label: ['Manufacturer', 'LegalPerson'], links: ['https://khironmed.co.uk/', 'https://khiron.ca/en/'], aliases: ['Khiron Life Sciences Corp'], addresses: ['Bogotá, Colombia,Carrera 11 # 84 - 09, (+57) 1 7442064, info@khiron.ca'] },
+
+    { NAME: 'MedCan', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.medcan.co.za/'], aliases: [], addresses: ['South Africa'] },
+
+    { NAME: 'Bedrocan', _label: ['Manufacturer', 'LegalPerson'], links: ['https://bedrocan.com/'], aliases: [], addresses: ['Bedrocan International, De Zwaaikom 4, 9641 KV Veendam, Netherlands,t: +31 598 62 37 31'] },
+
+    { NAME: 'Spectrum', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.spectrumtherapeutics.com/'], aliases: ['Spectrum Therapeutics'], addresses: [] },
+
+
+    { NAME: 'Rokshaw Laboratories', _label: ['SpecialsManufacturer', 'Supplier', 'LegalPerson'], activities: ['manufactures unlicenced specials', "supplies pharmacies in UK", 'supplies NHS'], links:['https://rokshaw.co.uk/'] },
+    { NAME: 'Curaleaf', _label: ['Producer', 'Distributor', 'Manufacturer', 'Group', 'LegalPerson'], activities: ['production, development, and distribution in Europe', 'owns Rokshaw Laboratories and CBPMAccess'], links: ['https://curaleaf.com/','https://curaleafinternational.com/our-international-companies/'], aliases: ['Curaleaf Holdings, Inc.', 'Curaleaf International'], associatedEntities: ['Adven'], },
+
+    { NAME: 'CBPMAccess', _label: ['Pharmacy', 'LegalPerson'], activities: ['manufactures specials', 'dispensing'], links: ['https://www.cbpmaccess.co.uk/'], },
+
+    { NAME: 'Tilray', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.tilray.com/', 'https://en.wikipedia.org/wiki/Tilray', 'https://www.nasdaq.com/market-activity/stocks/tlry', 'https://money.tmx.com/en/quote/TLRY'] },
+
+    { NAME: 'Columbia Care', _label: ['Manufacturer', 'LegalPerson'], links: ['https://col-care.com/'], aliases: ['ColCare'] },
+
+    { NAME: 'Althea', _label: ['Manufacturer', 'LegalPerson', 'ProductBrand'], links: ['https://althea.life/'] },
+
+    { NAME: 'Columbia Care', _label: ['Manufacturer', 'LegalPerson'], links: ['https://col-care.com/'], aliases: ['ColCare'] },
+    { NAME: 'LGP', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.littlegreenpharma.com/'], aliases: ['Little Green Pharma'] },
+    { NAME: 'Bod Pharma', _label: ['Manufacturer', 'LegalPerson'], links: ['https://bodaustralia.com/', 'https://www.marketindex.com.au/asx/bda'], aliases: ['BOD', 'Bod Australia Ltd'], countries: ['Australia'] },
+    { NAME: 'BOL Pharma', _label: ['Manufacturer', 'LegalPerson'], links: ['https://www.bolpharma.com/'], aliases: ['Breath Of Life'], countries: ['Israel'] },
+    { NAME: 'Cann Group', _label: ['Manufacturer', 'LegalPerson'], activities: ['R&D', 'production', 'exports'], links: ['https://www.canngrouplimited.com/'], aliases: ['Cann Group Limited'], countries: ['Australia'] },
+  ]
+}
+
+const news = [
+  { link: 'https://ir.curaleaf.com/2021-04-07-Curaleaf-Completes-Acquisition-of-EMMAC-and-Secures-US-130-Million-Investment-from-a-Single-Strategic-Institutional-Investor', summary: 'Curaleaf Holdings, Inc. acquired EMMAC which produces Adven', datePosted: [2021, 4, 7] },
+  { link: 'https://lyphegroup.com/northern-green-canada-partnership/', summary: 'LYPHE Group imports Northern Green Canada into the U.K. market as supply to the medical cannabis brand, NOIDECS.', datePosted: [2022, 2, 15] },
+]

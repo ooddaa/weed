@@ -118,7 +118,7 @@ node.Cultivar {
   text-color-internal: #FFFFFF;
 }
 node.Product {
-  caption: "{product}";
+  caption: "{NAME}";
   color: #4C8EDA;
   border-color: #2870c2;
   text-color-internal: #FFFFFF;
