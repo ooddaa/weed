@@ -226,7 +226,7 @@ function createDispensary(product) /* : Node */ {
  * @param {Object} product
  * @returns {EnhancedNode}
  */
-function productToEnode(product) /* : EnhancedNode */ {
+function productToEnode1(product) /* : EnhancedNode */ {
   // log(endNode)
   const extract /* : Function */ = extractPropertyAsRelationshipFrom(product);
   const newEnode /* : EnhancedNode */ = builder.makeEnhancedNode(
@@ -255,6 +255,7 @@ function productToEnode(product) /* : EnhancedNode */ {
         direction: ">",
         extractionFunction: createManufacturer,
       }),
+      // "HAS_FORM"
       ...extract({
         type: ["HAS_FORM"],
         direction: ">",
@@ -276,9 +277,31 @@ function productToEnode(product) /* : EnhancedNode */ {
   return newEnode;
 }
 
-const manufacturers = {
-  Bedrocan: ["Bedrobinol", "Bedrocan", "Bedrolite", "Bedica"],
-};
+function productToEnode() {
+  const original = {
+    product: "Noidecs T10:C15 Cannabis Oil",
+    form: "Full Spectrum Oil",
+    strain: "Sativa",
+    cultivar: "N/A",
+    thc: "10 mg/ml",
+    cbd: "15 mg/ml",
+    size: "50ml",
+    privateprescriptionpricingapprox: "50ml bottle from £175",
+    availableonprojecttwenty21: "Yes",
+    productsize: "50ml bottle",
+    monthlyamountcappedat15: "upto 50ml",
+    pharmacyt21: "Dispensary Green",
+    notes: "",
+    levelsinstockuk: "Out Of Stock",
+    atpharmacy: "No",
+    moreinformationreviews: null,
+    dispensary: "dg",
+  };
+  const enode = {
+    // product: makeCoreNode("Noidecs T10:C15 Cannabis Oil"),
+    // form: relationshipOut(["HAS_FORM"], createForm),
+  };
+}
 
 /* 
 match (p:Price) where size((p)<-[:HAS_PRICE]-(:Product)) > 1 return (p)<-[:HAS_PRICE]-(:Product)-[:MADE_BY]->(:Manufacturer)
