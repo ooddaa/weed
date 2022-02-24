@@ -211,31 +211,128 @@ function formatPrice(str) /*: Object */ {
 
 /**
  * entity resolution module
- * @param {*} name 
- * @param {*} kb 
- * @returns 
+ * @param {*} name
+ * @param {*} kb
+ * @returns
  */
-function processName(name, kb)/* : String[] | Array<null> */ {
+function processName(name, kb) /* : String[] | Array<null> */ {
   const rv = kb.map(({ preferredName, aliases }) => {
-      const matches = []
-      aliases.forEach((alias) => {
-          const pattern = new RegExp(name, 'i')
-          if (pattern.test(alias)) {
-              matches.push(true)
-          } else {
-              matches.push(false)
-          }
-      })
-      return matches.includes(true) ? preferredName : null
-  })
-  const result = rv.filter(x => x)
+    const matches = [];
+    aliases.forEach((alias) => {
+      const pattern = new RegExp(name, "i");
+      if (pattern.test(alias)) {
+        matches.push(true);
+      } else {
+        matches.push(false);
+      }
+    });
+    return matches.includes(true) ? preferredName : null;
+  });
+  const result = rv.filter((x) => x);
   if (result.length == 0) {
-    return [name]
+    return [name];
   } else {
-    return result
+    return result;
   }
 }
 
+/**
+ * Parses Active Pharmaceutical Ingredients: THC and CBD contents.
+ * @param {Object} product - Product POJO from https://thecannabispages.co.uk/cbmps-stock-checker/
+ * @returns {{ thc: [string, number], cbd: [string, number]}} - api: [parsedValue:string, percentageValue:number]
+ * @example
+ *
+ * // ignores <1%
+ * const rv = parseAPI({
+ *  thc: "20%",
+ *  cbd: "<1%",
+ * });
+ * console.log(rv); // { thc: ["20%", .2], cbd: ["<1%", .01]}
+ *
+ * // takes average of two
+ * const rv2 = parseAPI({
+ *  thc: "18%-22%",
+ *  cbd: "<1%",
+ * });
+ * console.log(rv2); // { thc: ["18%-22%", .2], cbd: ["<1%", .01]}
+ *
+ */
+function parseAPI({ thc, cbd }) {
+  let thcMatch, cbdMatch, thcMatchPrc, cbdMatchPrc;
+  if (/-/.test(thc)) {
+    // 18%-22%
+    // take average
+    thcMatch = thc.match(/(<?([0-9]*)(%))-(<?([0-9]*)(%))/);
+    let [a, b] = [thcMatch[2], thcMatch[5]];
+
+    // [
+    //   '<18%-22%',
+    //   '<18%',
+    //   '18',
+    //   '%',
+    //   '22%',
+    //   '22',
+    //   '%',
+    //   index: 0,
+    //   input: '<18%-22%',
+    //   groups: undefined
+    // ]
+    if (isNaN(a) || isNaN(b)) {
+      throw new Error(`parseAPI: value is NaN.\nrv: ${JSON.stringify(rv)}`);
+    } else {
+      thcMatchPrc = (Number(a) + Number(b)) / 200; // == (/ 2 / 100);
+    }
+  } else {
+    thcMatch = thc.match(/<?([0-9]*)(%)/);
+    if (isNaN(thcMatch[1])) {
+      throw new Error(
+        `parseAPI: thc value is NaN.\nthcMatch: ${JSON.stringify(thcMatch)}`
+      );
+    } else {
+      thcMatchPrc = Number(thcMatch[1]) / 100;
+    }
+  }
+
+  if (/-/.test(cbd)) {
+    // 18%-22%
+    // take average
+    cbdMatch = cbd.match(/(<?([0-9]*)(%))-(<?([0-9]*)(%))/);
+    let [a, b] = [cbdMatch[2], cbdMatch[5]];
+
+    // [
+    //   '<18%-22%',
+    //   '<18%',
+    //   '18',
+    //   '%',
+    //   '22%',
+    //   '22',
+    //   '%',
+    //   index: 0,
+    //   input: '<18%-22%',
+    //   groups: undefined
+    // ]
+    if (isNaN(a) || isNaN(b)) {
+      throw new Error(`parseAPI: value is NaN.\nrv: ${JSON.stringify(rv)}`);
+    } else {
+      cbdMatchPrc = (Number(a) + Number(b)) / 2;
+    }
+  } else {
+    cbdMatch = cbd.match(/<?([0-9]*)(%)/);
+    if (isNaN(cbdMatch[1])) {
+      throw new Error(
+        `parseAPI: cbd value is NaN.\ncbdMatch: ${JSON.stringify(cbdMatch)}`
+      );
+    } else {
+      cbdMatchPrc = Number(cbdMatch[1]) / 100;
+    }
+  }
+  const rv = {
+    thc: [thcMatch[0], thcMatchPrc],
+    cbd: [cbdMatch[0], cbdMatchPrc],
+  };
+  return rv;
+}
+
 // export default { parsePrice, formatPrice };
-module.exports = { parsePrice, formatPrice, processName };
+module.exports = { parsePrice, formatPrice, processName, parseAPI };
 // module.exports = parsePrice;

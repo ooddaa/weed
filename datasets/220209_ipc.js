@@ -1,24 +1,5 @@
 module.exports = [
   {
-    product: "Flowers",
-    form: "",
-    strain: "",
-    cultivar: "",
-    thc: "",
-    cbd: "",
-    size: "",
-    privateprescriptionpricingapprox: "",
-    availableonprojecttwenty21: "",
-    productsize: "",
-    monthlyamountcappedat15: "",
-    pharmacyt21: "",
-    notes: "",
-    levelsinstockuk: "",
-    atpharmacy: "",
-    moreinformationreviews: null,
-  },
-
-  {
     product: "Adven Flos 20 | 0",
     form: "Whole Flower",
     strain: "Indica",
