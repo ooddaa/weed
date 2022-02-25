@@ -219,6 +219,7 @@ function createPrices(product) /* : Node[] */ {
   const priceNodes = prices.map((price) => {
     return builder.makeNode(["Price"], {
       NAME: price.sourceStr,
+      PRODUCTTOTALAMOUNT: price.productTotalAmount,
       ...price,
     });
   });

@@ -81,10 +81,13 @@ function parsePrice(product) /*: Object[] */ {
   }
 
   /* default case */
-  return [str].map((priceStr) => formatPrice(priceStr, product.size));
+  return [str].map((priceStr) => {
+    // log(product.product, product.size, priceStr, "========================");
+    return formatPrice(priceStr, product);
+  });
 }
 
-function formatPrice(str, size) /*: Object */ {
+function formatPrice(str, product) /*: Object */ {
   const currencies = {
     "£": "GBP",
     $: "USD",
@@ -240,7 +243,7 @@ function formatPrice(str, size) /*: Object */ {
   if (matchedCase4 != null && !isNaN(matchedCase4[2])) {
     // log("matchedCase4");
     // 10g, 10ml, .05ml
-
+    let { size } = product;
     let sizeMatch = size ? size.match(/([0-9]*(.[0-9]*)?)\s*(mg|g|ml)/) : null;
     // [
     //   0 '25ml',
@@ -251,7 +254,9 @@ function formatPrice(str, size) /*: Object */ {
     // log(sizeMatch);
 
     if (sizeMatch !== null) {
-      return {
+      // log("1");
+
+      const rv = {
         sourceStr: str,
         totalPrice: Number(matchedCase4[2]) || null,
         currencySymbol: matchedCase4[1] || null,
@@ -261,8 +266,10 @@ function formatPrice(str, size) /*: Object */ {
         productMeasurementUnit: sizeMatch[3] || null,
         productPackaging: null,
       };
+
+      return rv;
     } else {
-      return {
+      const rv = {
         sourceStr: str,
         totalPrice: Number(matchedCase4[2]) || null,
         currencySymbol: matchedCase4[1] || null,
@@ -272,6 +279,8 @@ function formatPrice(str, size) /*: Object */ {
         productMeasurementUnit: null,
         productPackaging: null,
       };
+
+      return rv;
     }
   }
 
