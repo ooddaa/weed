@@ -1,11 +1,25 @@
 // import { parsePrice, formatPrice } from "../parsers.mjs";
 const { parsePrice, formatPrice } = require("../parsers.js");
-const util = require("util");
+const { log } = require("../stuff");
 
-const log = (...items) =>
-  items.forEach((item) =>
-    console.log(util.inspect(item, { depth: null, colors: true }))
-  );
+const altea = {
+  product: "Althea CBD100",
+  form: "Full Spectrum Oil",
+  strain: "Sativa",
+  cultivar: "N/A",
+  thc: "0.8 mg/ml",
+  cbd: "100 mg/ml",
+  size: "25ml",
+  privateprescriptionpricingapprox: "£199",
+  availableonprojecttwenty21: "No",
+  productsize: "",
+  monthlyamountcappedat15: "",
+  pharmacyt21: "",
+  notes: "",
+  levelsinstockuk: "Low (100 or less)",
+  atpharmacy: "Yes",
+  moreinformationreviews: null,
+};
 
 describe("should find delimiters", () => {
   test("/r", () => {
@@ -42,8 +56,13 @@ describe("should find delimiters", () => {
 });
 
 describe("should extract price per quantity", () => {
+  test("the first argument must be product", () => {
+    expect(() => {
+      parsePrice();
+    }).toThrow("parsePrice: the first argument must be product.");
+  });
   test("nothing", () => {
-    const input = "";
+    const input = {};
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
@@ -59,30 +78,73 @@ describe("should extract price per quantity", () => {
     });
   });
 
-  test("£199", () => {
-    const input = "£199";
+  test("£199, 25ml", () => {
+    const input = {
+      privateprescriptionpricingapprox: "£199",
+      size: "25ml",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: input,
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 199,
       currency: "GBP",
       currencySymbol: "£",
-      productTotalAmount: null,
-      productQuantity: null,
-      productMeasurementUnit: null,
+      productTotalAmount: "25ml",
+      productQuantity: 25,
+      productMeasurementUnit: "ml",
+      productPackaging: null,
+    });
+  });
+  test("£199, .5ml", () => {
+    const input = {
+      privateprescriptionpricingapprox: "£199",
+      size: ".5ml",
+    };
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: input.privateprescriptionpricingapprox,
+      totalPrice: 199,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: ".5ml",
+      productQuantity: 0.5,
+      productMeasurementUnit: "ml",
+      productPackaging: null,
+    });
+  });
+  test("£199, 0.9ml", () => {
+    const input = {
+      privateprescriptionpricingapprox: "£199",
+      size: "0.9ml",
+    };
+    const result = parsePrice(input);
+
+    expect(result).toBeInstanceOf(Array);
+    expect(result[0]).toMatchObject({
+      sourceStr: input.privateprescriptionpricingapprox,
+      totalPrice: 199,
+      currency: "GBP",
+      currencySymbol: "£",
+      productTotalAmount: "0.9ml",
+      productQuantity: 0.9,
+      productMeasurementUnit: "ml",
       productPackaging: null,
     });
   });
 
   test("£199.99", () => {
-    const input = "£199.99";
+    const input = {
+      privateprescriptionpricingapprox: "£199.99",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: input,
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 199.99,
       currency: "GBP",
       currencySymbol: "£",
@@ -94,12 +156,14 @@ describe("should extract price per quantity", () => {
   });
 
   test("50ml bottle from £175", () => {
-    const input = "50ml bottle from £175";
+    const input = {
+      privateprescriptionpricingapprox: "50ml bottle from £175",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: input,
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 175,
       currency: "GBP",
       currencySymbol: "£",
@@ -111,12 +175,14 @@ describe("should extract price per quantity", () => {
   });
 
   test("40ml from £162.50", () => {
-    const input = "40ml from £162.50";
+    const input = {
+      privateprescriptionpricingapprox: "40ml from £162.50",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: input,
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 162.5,
       currency: "GBP",
       currencySymbol: "£",
@@ -128,12 +194,14 @@ describe("should extract price per quantity", () => {
   });
 
   test("10g from £85", () => {
-    const input = "10g from £85";
+    const input = {
+      privateprescriptionpricingapprox: "10g from £85",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: input,
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 85,
       currency: "GBP",
       currencySymbol: "£",
@@ -145,12 +213,14 @@ describe("should extract price per quantity", () => {
   });
 
   test("10g from £85.50", () => {
-    const input = "10g from £85.99";
+    const input = {
+      privateprescriptionpricingapprox: "10g from £85.99",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: input,
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 85.99,
       currency: "GBP",
       currencySymbol: "£",
@@ -162,12 +232,14 @@ describe("should extract price per quantity", () => {
   });
 
   test("£88 for 5g", () => {
-    const input = "£88 for 5g";
+    const input = {
+      privateprescriptionpricingapprox: "£88 for 5g",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: "£88 for 5g",
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 88,
       currency: "GBP",
       currencySymbol: "£",
@@ -179,12 +251,14 @@ describe("should extract price per quantity", () => {
   });
 
   test("£88.99 for 5g", () => {
-    const input = "£88.99 for 5g";
+    const input = {
+      privateprescriptionpricingapprox: "£88.99 for 5g",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
     expect(result[0]).toMatchObject({
-      sourceStr: "£88.99 for 5g",
+      sourceStr: input.privateprescriptionpricingapprox,
       totalPrice: 88.99,
       currency: "GBP",
       currencySymbol: "£",
@@ -197,7 +271,9 @@ describe("should extract price per quantity", () => {
 
   test("£75 for 10g£150 for 20g£225 for 30g", () => {
     // privateprescriptionpricingapprox: "£88 for 5g",
-    const input = "£75 for 10g£150 for 20g£225 for 30g";
+    const input = {
+      privateprescriptionpricingapprox: "£75 for 10g£150 for 20g£225 for 30g",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
@@ -236,7 +312,10 @@ describe("should extract price per quantity", () => {
 
   test("£88 for 5g £176 for 20g £212 for 30g", () => {
     // privateprescriptionpricingapprox: "£88 for 5g\r£176 for 20g\r£212 for 30g",
-    const input = "£88 for 5g\r£176 for 20g\r£212 for 30g";
+    const input = {
+      privateprescriptionpricingapprox:
+        "£88 for 5g\r£176 for 20g\r£212 for 30g",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
@@ -274,8 +353,10 @@ describe("should extract price per quantity", () => {
   });
 
   test("5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350", () => {
-    const input =
-      "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350";
+    const input = {
+      privateprescriptionpricingapprox:
+        "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);
@@ -323,7 +404,10 @@ describe("should extract price per quantity", () => {
   });
 
   test("30 capsules from £125 - 60 capsules from £169.99", () => {
-    const input = "30 capsules from £125 - 60 capsules from £169.99";
+    const input = {
+      privateprescriptionpricingapprox:
+        "30 capsules from £125 - 60 capsules from £169.99",
+    };
     const result = parsePrice(input);
 
     expect(result).toBeInstanceOf(Array);

@@ -1,4 +1,6 @@
-function parsePrice(str) /*: Object[] */ {
+const { log } = require("./stuff");
+
+function parsePrice1(str) /*: Object[] */ {
   if (typeof str !== "string") {
     throw new Error("parsePrice: the first argument must be a string.");
   }
@@ -30,8 +32,59 @@ function parsePrice(str) /*: Object[] */ {
 
   return [str].map(formatPrice);
 }
+function parsePrice(product) /*: Object[] */ {
+  if (typeof product !== "object") {
+    throw new Error("parsePrice: the first argument must be product.");
+  }
 
-function formatPrice(str) /*: Object */ {
+  let str = product.privateprescriptionpricingapprox;
+
+  /* no price to work with */
+  if (!str) {
+    return [
+      {
+        sourceStr: null,
+        totalPrice: null,
+        currency: null,
+        currencySymbol: null,
+        productTotalAmount: null,
+        productMeasurementUnit: null,
+        productQuantity: null,
+        productPackaging: null,
+      },
+    ];
+  }
+
+  // test how many prices are there in the string
+
+  // "£88 for 5g\r£176 for 20g\r£212 for 30g"
+  let ret = /\r/;
+  if (str.match(ret) !== null) {
+    // log("ret matched");
+    return str.split(ret).map(formatPrice);
+  }
+
+  // "5g pots from £70 - 10g pots from £125 - 20g from £240 - 30g from £350"
+  let dashes = /\s-\s/;
+  if (str.match(dashes) !== null) {
+    // log("dashes matched");
+    return str.split(dashes).map(formatPrice);
+  }
+
+  // "£75 for 10g£150 for 20g£225 for 30g"
+  if (str.match(/\w£\b/g) !== null) {
+    const result = str
+      .split(/£\b/)
+      .filter((x) => x)
+      .map((str) => "£" + str);
+    return result.map(formatPrice);
+  }
+
+  /* default case */
+  return [str].map((priceStr) => formatPrice(priceStr, product.size));
+}
+
+function formatPrice(str, size) /*: Object */ {
   const currencies = {
     "£": "GBP",
     $: "USD",
@@ -176,6 +229,7 @@ function formatPrice(str) /*: Object */ {
 
   // CASE 4
   // £199 | £199.99
+  // picks productTotalAmount from product.size
   let matchedCase4 = str.match(/([£$])([0-9]*(.[0-9]*)?)/);
   // log(matchedCase4);
   /* [ 
@@ -185,16 +239,40 @@ function formatPrice(str) /*: Object */ {
     index: 0, input: '£199', groups: undefined ] */
   if (matchedCase4 != null && !isNaN(matchedCase4[2])) {
     // log("matchedCase4");
-    return {
-      sourceStr: str,
-      totalPrice: Number(matchedCase4[2]) || null,
-      currencySymbol: matchedCase4[1] || null,
-      currency: currencies[matchedCase4[1]] || null,
-      productTotalAmount: null,
-      productQuantity: null,
-      productMeasurementUnit: null,
-      productPackaging: null,
-    };
+    // 10g, 10ml, .05ml
+
+    let sizeMatch = size ? size.match(/([0-9]*(.[0-9]*)?)\s*(mg|g|ml)/) : null;
+    // [
+    //   0 '25ml',
+    //   1 '25',
+    //   2 undefined
+    //   3 'ml',
+    //   index: 0, input: '25ml', groups: undefined ]
+    // log(sizeMatch);
+
+    if (sizeMatch !== null) {
+      return {
+        sourceStr: str,
+        totalPrice: Number(matchedCase4[2]) || null,
+        currencySymbol: matchedCase4[1] || null,
+        currency: currencies[matchedCase4[1]] || null,
+        productTotalAmount: size,
+        productQuantity: isNaN(sizeMatch[1]) ? null : Number(sizeMatch[1]),
+        productMeasurementUnit: sizeMatch[3] || null,
+        productPackaging: null,
+      };
+    } else {
+      return {
+        sourceStr: str,
+        totalPrice: Number(matchedCase4[2]) || null,
+        currencySymbol: matchedCase4[1] || null,
+        currency: currencies[matchedCase4[1]] || null,
+        productTotalAmount: null,
+        productQuantity: null,
+        productMeasurementUnit: null,
+        productPackaging: null,
+      };
+    }
   }
 
   return {
@@ -259,31 +337,68 @@ function processName(name, kb) /* : String[] | Array<null> */ {
  */
 function parseAPI({ thc, cbd }) {
   let thcMatch, cbdMatch, thcMatchPrc, cbdMatchPrc;
-  if (/-/.test(thc)) {
+  let mainPattern =
+    /(<?([0-9]*)(.[0-9]*)?(%)?)\s*-\s*(<?([0-9]*)(.[0-9]*)?(%)?)/;
+  let decimalsPattern = /<?([0-9]*(.[0-9]*)?)(%)/;
+  let mgPattern = /<?([0-9]*(.[0-9]*)?)\s*(mg)/;
+  // nothing
+  // log(thc);
+  if (thc == "") {
+    // log('thc == ""');
+    thcMatch = thc;
+    thcMatchPrc = null;
+  } else if (/-/.test(thc)) {
+    // log("/-/.test(thc)");
     // 18%-22%
+    // '<18%-22%'
     // take average
-    thcMatch = thc.match(/(<?([0-9]*)(%))-(<?([0-9]*)(%))/);
-    let [a, b] = [thcMatch[2], thcMatch[5]];
 
+    thcMatch = thc.match(mainPattern);
     // [
-    //   '<18%-22%',
-    //   '<18%',
-    //   '18',
-    //   '%',
-    //   '22%',
-    //   '22',
-    //   '%',
+    //   0 '<18%-22%',
+    //   1 '<18%',
+    //   2 '18',
+    //   3 '%',
+    //   4 undefined,
+    //   5 '22%',
+    //   6 '22',
+    //   7 '%',
+    //   undefined,
     //   index: 0,
     //   input: '<18%-22%',
     //   groups: undefined
     // ]
+
+    // log(thc);
+    // log(thcMatch);
+    let [a, b] = [thcMatch[2], thcMatch[6]];
+
     if (isNaN(a) || isNaN(b)) {
       throw new Error(`parseAPI: value is NaN.\nrv: ${JSON.stringify(rv)}`);
     } else {
       thcMatchPrc = (Number(a) + Number(b)) / 200; // == (/ 2 / 100);
     }
-  } else {
-    thcMatch = thc.match(/<?([0-9]*)(%)/);
+  } else if (/mg/.test(thc)) {
+    /* 10 mg | 10mg/ml <10mg | <10 mg */
+    // log("/mg/.test(thc)");
+    thcMatch = thc.match(mgPattern);
+
+    // log(thcMatch);
+    // [
+    //   0 '0.5 mg',
+    //   1 '0.5', == 0.005
+    //   2 '.5',
+    //   3 'mg',
+    //   index: 0,
+    //   input: '0.5 mg',
+    //   groups: undefined
+    // ]
+    thcMatchPrc = thcMatch[1] / 100;
+    // log(thcMatchPrc);
+  } else if (decimalsPattern.test(thc)) {
+    /* 10% or 10.99% */
+    thcMatch = thc.match(decimalsPattern);
+    // log(thc);
     if (isNaN(thcMatch[1])) {
       throw new Error(
         `parseAPI: thc value is NaN.\nthcMatch: ${JSON.stringify(thcMatch)}`
@@ -291,13 +406,24 @@ function parseAPI({ thc, cbd }) {
     } else {
       thcMatchPrc = Number(thcMatch[1]) / 100;
     }
+  } else {
+    /* default */
+    thcMatch = null;
+    thcMatchPrc = null;
   }
 
-  if (/-/.test(cbd)) {
+  if (cbd == "") {
+    // log('cbd == ""');
+    cbdMatch = cbd;
+    cbdMatchPrc = null;
+  } else if (/-/.test(cbd)) {
+    // log("/-/.test(cbd)");
     // 18%-22%
     // take average
-    cbdMatch = cbd.match(/(<?([0-9]*)(%))-(<?([0-9]*)(%))/);
-    let [a, b] = [cbdMatch[2], cbdMatch[5]];
+
+    cbdMatch = cbd.match(mainPattern);
+    // log(cbdMatch);
+    let [a, b] = [cbdMatch[2], cbdMatch[6]];
 
     // [
     //   '<18%-22%',
@@ -316,19 +442,55 @@ function parseAPI({ thc, cbd }) {
     } else {
       cbdMatchPrc = (Number(a) + Number(b)) / 2;
     }
-  } else {
-    cbdMatch = cbd.match(/<?([0-9]*)(%)/);
+  } else if (/mg/.test(cbd)) {
+    /* 10 mg */
+    // log("/mg/.test(cbd)");
+    cbdMatch = cbd.match(mgPattern);
+
+    // log(cbdMatch);
+    // [
+    //   0 '0.5 mg',
+    //   1 '0.5', == 0.005
+    //   2 '.5',
+    //   3 'mg',
+    //   index: 0,
+    //   input: '0.5 mg',
+    //   groups: undefined
+    // ]
+    cbdMatchPrc = cbdMatch[1] / 100;
+    // log(cbdMatchPrc);
+  } else if (decimalsPattern.test(cbd)) {
+    cbdMatch = cbd.match(decimalsPattern);
+
+    //
+    // [
+    //   0 '16.15%',
+    //   1 '16.15',
+    //   2 '.15',
+    //   3 '%',
+    //   index: 0,
+    //   input: '16.15%',
+    //   groups: undefined
+    // ]
+    // calculate how many decimal points (usually just 2) the original percentage had
+    let decimals = cbdMatch[2] ? cbdMatch[2].split(".")[1].length : 0;
+
     if (isNaN(cbdMatch[1])) {
       throw new Error(
         `parseAPI: cbd value is NaN.\ncbdMatch: ${JSON.stringify(cbdMatch)}`
       );
     } else {
-      cbdMatchPrc = Number(cbdMatch[1]) / 100;
+      cbdMatchPrc = Number((Number(cbdMatch[1]) / 100).toFixed(decimals + 2));
     }
+  } else {
+    /* default */
+    cbdMatch = null;
+    cbdMatchPrc = null;
   }
+
   const rv = {
-    thc: [thcMatch[0], thcMatchPrc],
-    cbd: [cbdMatch[0], cbdMatchPrc],
+    thc: [thcMatch && thcMatch[0], thcMatchPrc],
+    cbd: [cbdMatch && cbdMatch[0], cbdMatchPrc],
   };
   return rv;
 }

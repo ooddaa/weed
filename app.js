@@ -8,7 +8,7 @@ const {
   search,
 } = require("../mango/lib/index.js");
 const { has, flatten, isArray } = require("lodash");
-const { parsePrice, processName } = require("./parsers.js");
+const { parsePrice, processName, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
 const { isNode } = require("../mango/lib/Builder/index.js");
@@ -204,8 +204,18 @@ function createForm(product) /* : Node */ {
   return builder.makeNode(["Form"], { NAME: product.form || "UNKNOWN" });
 }
 
-function createPrices(product) /* : Node[] */ {
+function createPrices1(product) /* : Node[] */ {
   const prices = parsePrice(product.privateprescriptionpricingapprox);
+  const priceNodes = prices.map((price) => {
+    return builder.makeNode(["Price"], {
+      NAME: price.sourceStr,
+      ...price,
+    });
+  });
+  return priceNodes;
+}
+function createPrices(product) /* : Node[] */ {
+  const prices = parsePrice(product);
   const priceNodes = prices.map((price) => {
     return builder.makeNode(["Price"], {
       NAME: price.sourceStr,
@@ -222,21 +232,28 @@ function createDispensary(product) /* : Node */ {
 }
 
 /**
- * Turns a POJO into an EnhancedNode
- * @param {Object} product
+ * Turns a POJO into an EnhancedNode to be added to Neo4j.
+ * @param {Object} product - Product POJO from https://thecannabispages.co.uk/cbmps-stock-checker/
  * @returns {EnhancedNode}
  */
-function productToEnode1(product) /* : EnhancedNode */ {
+function productToEnode(product) /* : EnhancedNode */ {
   // log(endNode)
   const extract /* : Function */ = extractPropertyAsRelationshipFrom(product);
+  const { thc, cbd } = parseAPI(product);
+  // log(thc, cbd);
   const newEnode /* : EnhancedNode */ = builder.makeEnhancedNode(
     builder.makeNode(
       ["Product"],
       {
         NAME: product.product,
         FORM: product.form,
+        // THC: thc,
+        // CBD: cbd,
       },
-      product
+      { ...product, thcContentPrc: thc[1], cbdContentPrc: cbd[1] }
+      // thc,
+      // cbd
+      // ...parseAPI(product) // adds thc/cbd contents
     ),
     [
       ...extract({
@@ -261,11 +278,13 @@ function productToEnode1(product) /* : EnhancedNode */ {
         direction: ">",
         extractionFunction: createForm,
       }),
+      // "AT_DISPENSARY"
       ...extract({
         type: ["AT_DISPENSARY"],
         direction: ">",
         extractionFunction: createDispensary,
       }),
+      // "HAS_PRICE"
       ...extract({
         type: ["HAS_PRICE"],
         direction: ">",
@@ -277,7 +296,7 @@ function productToEnode1(product) /* : EnhancedNode */ {
   return newEnode;
 }
 
-function productToEnode() {
+function productToEnode1() {
   const original = {
     product: "Noidecs T10:C15 Cannabis Oil",
     form: "Full Spectrum Oil",
@@ -560,3 +579,9 @@ const news = [
     datePosted: [2022, 2, 15],
   },
 ];
+
+const find_thc_cbd = `MATCH (p:Product WHERE p.form contains 'Oil' and p.thcContentPrc >= .1 and p.cbdContentPrc >= .15 ) RETURN p`;
+const compare_two_oils_by_price_per_ml = `UNWIND ["Noidecs T10 Cannabis Oil", "Spectrum Therapeutics Blue Cannabis Oil"] as name
+match (oil:Product { NAME: name})
+match path=(oil)-[:HAS_PRICE]->(price:Price)
+return oil.NAME, oil.size, oil.thcContentPrc, oil.cbdContentPrc, price.productQuantity, price.totalPrice , price.totalPrice/price.productQuantity`;
