@@ -31,12 +31,18 @@ engine.verifyConnectivity({ database: "neo4j" }).then(log);
 const builder = new Builder();
 const mango = new Mango({ builder, engine });
 
+function addDispensary(dispensary) {
+  return function inner(product) {
+    return { ...product, dispensary };
+  };
+}
 /**
  * Merge Enodes
  * @param {*} data
  */
-async function worker2(data) {
-  const enodes = data.map(productToEnode);
+async function worker(data, dispensary) {
+  const addDG = addDispensary(dispensary);
+  const enodes = data.map(addDG).map(productToEnode);
   const result = await engine.mergeEnhancedNodes(enodes);
   return result;
 }
@@ -204,16 +210,6 @@ function createForm(product) /* : Node */ {
   return builder.makeNode(["Form"], { NAME: product.form || "UNKNOWN" });
 }
 
-function createPrices1(product) /* : Node[] */ {
-  const prices = parsePrice(product.privateprescriptionpricingapprox);
-  const priceNodes = prices.map((price) => {
-    return builder.makeNode(["Price"], {
-      NAME: price.sourceStr,
-      ...price,
-    });
-  });
-  return priceNodes;
-}
 function createPrices(product) /* : Node[] */ {
   const prices = parsePrice(product);
   const priceNodes = prices.map((price) => {
@@ -237,7 +233,7 @@ function createDispensary(product) /* : Node */ {
  * @param {Object} product - Product POJO from https://thecannabispages.co.uk/cbmps-stock-checker/
  * @returns {EnhancedNode}
  */
-function productToEnode(product) /* : EnhancedNode */ {
+function productToEnode(product, dispensary) /* : EnhancedNode */ {
   // log(endNode)
   const extract /* : Function */ = extractPropertyAsRelationshipFrom(product);
   const { thc, cbd } = parseAPI(product);
@@ -383,8 +379,8 @@ async function bedrocan2() {
   }
 }
 
-worker2(getData(dg)).then(() => {
-  worker2(getData(ipc)).then(() => {
+worker(getData(dg), "Dispensary Green").then(() => {
+  worker(getData(ipc), "IPS").then(() => {
     bedrocan2().then(() => log("ok"));
   });
 });
@@ -572,12 +568,21 @@ const news = [
     link: "https://ir.curaleaf.com/2021-04-07-Curaleaf-Completes-Acquisition-of-EMMAC-and-Secures-US-130-Million-Investment-from-a-Single-Strategic-Institutional-Investor",
     summary: "Curaleaf Holdings, Inc. acquired EMMAC which produces Adven",
     datePosted: [2021, 4, 7],
+    nodes: ["Curaleaf"],
   },
   {
     link: "https://lyphegroup.com/northern-green-canada-partnership/",
     summary:
       "LYPHE Group imports Northern Green Canada into the U.K. market as supply to the medical cannabis brand, NOIDECS.",
     datePosted: [2022, 2, 15],
+    nodes: ["LYPHE Group"],
+  },
+  {
+    link: "https://cannabiswealth.co.uk/2022/02/22/kanabo-14m-acquisition-telehealth-gp-service/",
+    summary:
+      "Kanabo makes £14m acquisition of telehealth GP serviceLYPHE Group imports Northern Green Canada into the U.K. market as supply to the medical cannabis brand, NOIDECS.",
+    datePosted: [2022, 2, 2],
+    nodes: ["Kanabo"],
   },
 ];
 
@@ -586,3 +591,7 @@ const compare_two_oils_by_price_per_ml = `UNWIND ["Noidecs T10 Cannabis Oil", "S
 match (oil:Product { NAME: name})
 match path=(oil)-[:HAS_PRICE]->(price:Price)
 return oil.NAME, oil.size, oil.thcContentPrc, oil.cbdContentPrc, price.productQuantity, price.totalPrice , price.totalPrice/price.productQuantity`;
+
+/* 
+match (p:Product WHERE p.FORM contains 'Oil')-[:AT_DISPENSARY]->(d:Dispensary WHERE NOT(d.NAME contains 'Green')) return p limit 4
+*/
