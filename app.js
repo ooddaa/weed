@@ -12,6 +12,7 @@ const { parsePrice, processName, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
 const { isNode } = require("../mango/lib/Builder/index.js");
+const legalPersons = require("./legalPersons");
 
 /* Instantiate Engine */
 const engine = new Engine({
@@ -41,8 +42,7 @@ function addDispensary(dispensary) {
  * @param {*} data
  */
 async function worker(data, dispensary) {
-  const addDG = addDispensary(dispensary);
-  const enodes = data.map(addDG).map(productToEnode);
+  const enodes = data.map(addDispensary(dispensary)).map(productToEnode);
   const result = await engine.mergeEnhancedNodes(enodes);
   return result;
 }
@@ -244,13 +244,8 @@ function productToEnode(product, dispensary) /* : EnhancedNode */ {
       {
         NAME: product.product,
         FORM: product.form,
-        // THC: thc,
-        // CBD: cbd,
       },
       { ...product, thcContentPrc: thc[1], cbdContentPrc: cbd[1] }
-      // thc,
-      // cbd
-      // ...parseAPI(product) // adds thc/cbd contents
     ),
     [
       ...extract({
@@ -381,210 +376,58 @@ async function bedrocan2() {
 
 worker(getData(dg), "Dispensary Green").then(() => {
   worker(getData(ipc), "IPS").then(() => {
-    bedrocan2().then(() => log("ok"));
+    bedrocan2().then(() => {
+      addLegalPersons(legalPersons).then(() => log("ok"));
+    });
   });
 });
-
-// worker2(getData(dg))
-// worker2(getData(ipc))
-// bedrocan2();
 
 function getData(dataset) {
   return dataset;
 }
+/* 
+  {
+  NAME: string,
+  _labels: string[],
+  links?: string[],
+  aliases?: string[],
+  associatedEntities?: string[],
+  addresses?: string[],
+}
+  */
+function legalPersonToEnode(
+  legalPerson /*: LegalPerson */
+) /* : EnhancedNode */ {
+  // const extract /* : Function */ =
+  //   extractPropertyAsRelationshipFrom(legalPerson);
+  const props = mango.decomposeProps(legalPerson);
+  // log(props);
+  const { requiredProps, optionalProps, privateProps } = props;
+  const newEnode /* : EnhancedNode */ = builder.makeEnhancedNode(
+    //
 
-function updateManufacturers() {
+    builder.makeNode(legalPerson._labels, requiredProps, {
+      ...optionalProps,
+      ...privateProps,
+    })
+  );
+  return newEnode;
+}
+
+async function addLegalPersons(
+  legalPersons /*: LegalPerson[] */
+) /* : Result */ {
   /* Take existing KG and update Manufacturers with this info */
   /* Assume that all manufacturers already have proper _hash, => new props must be optional? */
   /* or if we consider new props REQUIRED, then we need to recalculate hashes */
   /* we don't really need any more REQUIRED props as long as each Manufacturer is already unique by NAME */
-
-  const legalPersons = [
-    {
-      NAME: "Aurora",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://www.auroramedicine.com"],
-      aliases: ["Aurora Deutschland"],
-      associatedEntities: ["Pedanios"],
-    },
-    {
-      NAME: "Cellen",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://www.cellenhealth.com/"],
-      aliases: ["Aurora Deutschland"],
-      associatedEntities: ["Cellen Therapeutics", "Leva Clinic"],
-      addresses: [
-        "Cannon Place, 78 Cannon Street, London, United Kingdom, EC4N 6AF",
-      ],
-    },
-    {
-      NAME: "Leva Clinic",
-      _label: ["Dispensary", "Clinic", "LegalPerson"],
-      links: ["https://www.levaclinic.com/"],
-      aliases: ["Leva"],
-      associatedEntities: ["Cellen"],
-    },
-
-    {
-      NAME: "Khiron",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://khironmed.co.uk/", "https://khiron.ca/en/"],
-      aliases: ["Khiron Life Sciences Corp"],
-      addresses: [
-        "Bogotá, Colombia,Carrera 11 # 84 - 09, (+57) 1 7442064, info@khiron.ca",
-      ],
-    },
-
-    {
-      NAME: "MedCan",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://www.medcan.co.za/"],
-      aliases: [],
-      addresses: ["South Africa"],
-    },
-
-    {
-      NAME: "Bedrocan",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://bedrocan.com/"],
-      aliases: [],
-      addresses: [
-        "Bedrocan International, De Zwaaikom 4, 9641 KV Veendam, Netherlands,t: +31 598 62 37 31",
-      ],
-    },
-
-    {
-      NAME: "Spectrum",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://www.spectrumtherapeutics.com/"],
-      aliases: ["Spectrum Therapeutics"],
-      addresses: [],
-    },
-
-    {
-      NAME: "Rokshaw Laboratories",
-      _label: ["SpecialsManufacturer", "Supplier", "LegalPerson"],
-      activities: [
-        "manufactures unlicenced specials",
-        "supplies pharmacies in UK",
-        "supplies NHS",
-      ],
-      links: ["https://rokshaw.co.uk/"],
-    },
-    {
-      NAME: "Curaleaf",
-      _label: [
-        "Producer",
-        "Distributor",
-        "Manufacturer",
-        "Group",
-        "LegalPerson",
-      ],
-      activities: [
-        "production, development, and distribution in Europe",
-        "owns Rokshaw Laboratories and CBPMAccess",
-      ],
-      links: [
-        "https://curaleaf.com/",
-        "https://curaleafinternational.com/our-international-companies/",
-      ],
-      aliases: ["Curaleaf Holdings, Inc.", "Curaleaf International"],
-      associatedEntities: ["Adven"],
-    },
-
-    {
-      NAME: "CBPMAccess",
-      _label: ["Pharmacy", "LegalPerson"],
-      activities: ["manufactures specials", "dispensing"],
-      links: ["https://www.cbpmaccess.co.uk/"],
-    },
-
-    {
-      NAME: "Tilray",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: [
-        "https://www.tilray.com/",
-        "https://en.wikipedia.org/wiki/Tilray",
-        "https://www.nasdaq.com/market-activity/stocks/tlry",
-        "https://money.tmx.com/en/quote/TLRY",
-      ],
-    },
-
-    {
-      NAME: "Columbia Care",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://col-care.com/"],
-      aliases: ["ColCare"],
-    },
-
-    {
-      NAME: "Althea",
-      _label: ["Manufacturer", "LegalPerson", "ProductBrand"],
-      links: ["https://althea.life/"],
-    },
-
-    {
-      NAME: "Columbia Care",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://col-care.com/"],
-      aliases: ["ColCare"],
-    },
-    {
-      NAME: "LGP",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://www.littlegreenpharma.com/"],
-      aliases: ["Little Green Pharma"],
-    },
-    {
-      NAME: "Bod Pharma",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: [
-        "https://bodaustralia.com/",
-        "https://www.marketindex.com.au/asx/bda",
-      ],
-      aliases: ["BOD", "Bod Australia Ltd"],
-      countries: ["Australia"],
-    },
-    {
-      NAME: "BOL Pharma",
-      _label: ["Manufacturer", "LegalPerson"],
-      links: ["https://www.bolpharma.com/"],
-      aliases: ["Breath Of Life"],
-      countries: ["Israel"],
-    },
-    {
-      NAME: "Cann Group",
-      _label: ["Manufacturer", "LegalPerson"],
-      activities: ["R&D", "production", "exports"],
-      links: ["https://www.canngrouplimited.com/"],
-      aliases: ["Cann Group Limited"],
-      countries: ["Australia"],
-    },
-  ];
+  const enodes = legalPersons.map(legalPersonToEnode);
+  const result = await engine.mergeEnhancedNodes(enodes);
+  return result;
 }
 
-const news = [
-  {
-    link: "https://ir.curaleaf.com/2021-04-07-Curaleaf-Completes-Acquisition-of-EMMAC-and-Secures-US-130-Million-Investment-from-a-Single-Strategic-Institutional-Investor",
-    summary: "Curaleaf Holdings, Inc. acquired EMMAC which produces Adven",
-    datePosted: [2021, 4, 7],
-    nodes: ["Curaleaf"],
-  },
-  {
-    link: "https://lyphegroup.com/northern-green-canada-partnership/",
-    summary:
-      "LYPHE Group imports Northern Green Canada into the U.K. market as supply to the medical cannabis brand, NOIDECS.",
-    datePosted: [2022, 2, 15],
-    nodes: ["LYPHE Group"],
-  },
-  {
-    link: "https://cannabiswealth.co.uk/2022/02/22/kanabo-14m-acquisition-telehealth-gp-service/",
-    summary:
-      "Kanabo makes £14m acquisition of telehealth GP serviceLYPHE Group imports Northern Green Canada into the U.K. market as supply to the medical cannabis brand, NOIDECS.",
-    datePosted: [2022, 2, 2],
-    nodes: ["Kanabo"],
-  },
-];
+// legalPersonToEnode(legalPersons[0]);
+// addLegalPersons(legalPersons).then((r) => log(r));
 
 const find_thc_cbd = `MATCH (p:Product WHERE p.form contains 'Oil' and p.thcContentPrc >= .1 and p.cbdContentPrc >= .15 ) RETURN p`;
 const compare_two_oils_by_price_per_ml = `UNWIND ["Noidecs T10 Cannabis Oil", "Spectrum Therapeutics Blue Cannabis Oil"] as name
@@ -594,4 +437,8 @@ return oil.NAME, oil.size, oil.thcContentPrc, oil.cbdContentPrc, price.productQu
 
 /* 
 match (p:Product WHERE p.FORM contains 'Oil')-[:AT_DISPENSARY]->(d:Dispensary WHERE NOT(d.NAME contains 'Green')) return p limit 4
+*/
+
+/* MATCHES nodes without any relationships
+match (x) where not exists((x)--()) return x.NAME
 */
