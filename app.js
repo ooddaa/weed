@@ -79,42 +79,54 @@ function extractPropertyAsRelationshipFrom(extractFrom) {
    * @returns {RelationshipCandidate[]}
    */
   function inner({
-    type /* : String|String[] */,
+    type /* : string|string[] */,
     props /* : Object */,
     direction /* '>'|'<' */,
-    propToExtract /* : String */,
+    propToExtract /* : string */,
     extractionFunction /* : Function */,
+    labels /* : string[] */,
   }) /* : RelationshipCandidate[] */ {
     if ([">", "outbound", "<", "inbound"].includes(direction) != true) {
-      throw new Error(
-        `extractPropertyAsRelationshipFrom: expected direction to be one of ">" | "outbound" | "<" | "inbound".\ndirection: ${JSON.stringify(
-          direction
-        )}`
-      );
+      /* default to > */
+      direction = ">";
     }
     /**@TODO guard against missing both propToExtract & extractionFunction */
+    function makeNode(extractFrom) {
+      return function inner(propToExtract, labels) {
+        /**@TODO it's better not to have a dummy relationship */
+        if (isArray(propToExtract) ? !!propToExtract.length : !!propToExtract) {
+          return builder.makeNode([...(labels || propToExtract || "UNKNOWN")], {
+            NAME: extractFrom[propToExtract] || "UNKNOWN",
+          });
+        }
+        return null;
+      };
+    }
 
     const partner /* : Node|Node[] */ = extractionFunction
       ? extractionFunction(extractFrom, propToExtract)
-      : builder.makeNode([propToExtract || "ExtractedProp"], {
-          NAME: extractFrom[propToExtract] || "extractedProp",
-        });
+      : isArray(propToExtract)
+      ? propToExtract.map(makeNode(extractFrom))
+      : makeNode(extractFrom)(propToExtract, labels);
 
     const rcs = [];
+
     if (isArray(partner)) {
-      partner.forEach((node) => {
-        rcs.push(
-          builder.makeRelationshipCandidate(
-            type || ["DEFAULT_REL_TYPE"],
-            props ||
-              {
-                // DEFAULT_REL_PROP: "created by extractPropertyAsRelationship",
-              },
-            direction == ">" ? "outbound" : "inbound",
-            node
-          )
-        );
-      });
+      partner
+        .filter((x) => x)
+        .forEach((node) => {
+          rcs.push(
+            builder.makeRelationshipCandidate(
+              type || ["DEFAULT_REL_TYPE"],
+              props ||
+                {
+                  // DEFAULT_REL_PROP: "created by extractPropertyAsRelationship",
+                },
+              direction == ">" ? "outbound" : "inbound",
+              node
+            )
+          );
+        });
     } else {
       if (isNode(partner) !== true) {
         throw new Error(
@@ -398,18 +410,31 @@ function getData(dataset) {
 function legalPersonToEnode(
   legalPerson /*: LegalPerson */
 ) /* : EnhancedNode */ {
-  // const extract /* : Function */ =
-  //   extractPropertyAsRelationshipFrom(legalPerson);
+  const extract /* : Function */ =
+    extractPropertyAsRelationshipFrom(legalPerson);
   const props = mango.decomposeProps(legalPerson);
   // log(props);
   const { requiredProps, optionalProps, privateProps } = props;
   const newEnode /* : EnhancedNode */ = builder.makeEnhancedNode(
-    //
-
     builder.makeNode(legalPerson._labels, requiredProps, {
       ...optionalProps,
       ...privateProps,
-    })
+    }),
+    [
+      ...extract({
+        type: ["FROM_COUNTRY"],
+        // direction:
+        propToExtract: "countries", // string[]
+        labels: ["Country"], // supply custom labels without specifying extractionFunction
+        // extractionFunction: createStrain, // should be optional
+      }),
+      // ...extract({
+      //   type: ["FROM_STRAIN"],
+      //   direction: ">",
+      //   propToExtract: "strain",
+      //   extractionFunction: createStrain,
+      // }),
+    ]
   );
   return newEnode;
 }

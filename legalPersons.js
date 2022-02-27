@@ -11,6 +11,7 @@
 //   aliases?: string[],
 //   associatedEntities?: string[],
 //   addresses?: string[],
+//   countries: string[]
 // };
 
 // module.exports = { LegalPerson };
