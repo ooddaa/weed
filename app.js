@@ -8,11 +8,12 @@ const {
   search,
 } = require("../mango/lib/index.js");
 const { has, flatten, isArray } = require("lodash");
-const { parsePrice, processName, parseAPI } = require("./parsers.js");
+const { parsePrice, disambiguate, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
 const { isNode } = require("../mango/lib/Builder/index.js");
 const legalPersons = require("./legalPersons");
+const kb = require("./knowledgeBase.js");
 
 /* Instantiate Engine */
 const engine = new Engine({
@@ -55,13 +56,13 @@ async function worker(data, dispensary) {
 function createStrain(product) /* : Node */ {
   switch (product["strain"]) {
     case "Sativa":
-      return builder.makeNode(["Strain"], { NAME: "Sativa" });
+      return builder.makeNode(["Strain", "Sativa"], { NAME: "Sativa" });
     case "Indica":
-      return builder.makeNode(["Strain"], { NAME: "Indica" });
+      return builder.makeNode(["Strain", "Indica"], { NAME: "Indica" });
     case "Hybrid":
-      return builder.makeNode(["Strain"], { NAME: "Hybrid" });
+      return builder.makeNode(["Strain", "Hybrid"], { NAME: "Hybrid" });
     default:
-      return builder.makeNode(["Strain"], { NAME: "UNKNOWN" });
+      return builder.makeNode(["Strain", "UNKNOWN"], { NAME: "UNKNOWN" });
   }
 }
 
@@ -159,55 +160,9 @@ function createCultivar(product) /* : Node */ {
 
 function createManufacturer(product) /* : Node */ {
   // parse 'Khiron THC Rich'
-  /**
-   * @TODO write choseManufacturer(product) that intelligently matches manufacturer
-   * mb even should consult KnowlegeBase
-   */
-  const kb = [
-    {
-      pattern: new RegExp("tilray", "i"),
-      preferredName: "Tilray",
-      aliases: ["Tilray", "TILRAY"],
-    },
-    {
-      pattern: new RegExp("aurora", "i"),
-      preferredName: "Aurora",
-      aliases: ["Aurora", "PEDANIOS"],
-    },
-    {
-      pattern: new RegExp("columbia", "i"),
-      preferredName: "Columbia Care",
-      aliases: ["Columbia", "Columbia Care", "COLUMBIA"],
-    },
-    {
-      pattern: new RegExp("bedrocan", "i"),
-      preferredName: "Bedrocan",
-      aliases: ["Bedrocan", "BEDROCAN"],
-    },
-    {
-      pattern: new RegExp("bedrolite", "i"),
-      preferredName: "Bedrocan",
-      aliases: ["bedrolite"],
-    },
-    {
-      pattern: new RegExp("bediol", "i"),
-      preferredName: "Bedrocan",
-      aliases: ["bediol"],
-    },
-    {
-      pattern: new RegExp("bedrobinol", "i"),
-      preferredName: "Bedrocan",
-      aliases: ["bedrobinol"],
-    },
-    {
-      pattern: new RegExp("bedica", "i"),
-      preferredName: "Bedrocan",
-      aliases: ["bedica"],
-    },
-  ];
 
   const [name, ...rest] = product["product"].split(" ");
-  const [preferredName] = processName(name, kb); // entity resolution module
+  const [preferredName] = disambiguate(name, kb); // entity resolution module
 
   return builder.makeNode(["Manufacturer"], { NAME: preferredName });
 }
@@ -254,44 +209,39 @@ function productToEnode(product, dispensary) /* : EnhancedNode */ {
     builder.makeNode(
       ["Product"],
       {
-        NAME: product.product,
-        FORM: product.form,
+        NAME: disambiguate(product.product, kb)[0],
+        FORM: disambiguate(product.form, kb)[0],
+        THC: thc[1],
+        CBD: cbd[1],
+        SIZE: product.size,
       },
-      { ...product, thcContentPrc: thc[1], cbdContentPrc: cbd[1] }
+      product
     ),
     [
       ...extract({
         type: ["FROM_STRAIN"],
-        direction: ">",
-        propToExtract: "strain",
         extractionFunction: createStrain,
       }),
       ...extract({
         type: ["FROM_CULTIVAR"],
-        direction: ">",
         extractionFunction: createCultivar,
       }),
       ...extract({
         type: ["MADE_BY"],
-        direction: ">",
         extractionFunction: createManufacturer,
       }),
       // "HAS_FORM"
       ...extract({
         type: ["HAS_FORM"],
-        direction: ">",
         extractionFunction: createForm,
       }),
-      // "AT_DISPENSARY"
       ...extract({
         type: ["AT_DISPENSARY"],
-        direction: ">",
         extractionFunction: createDispensary,
       }),
       // "HAS_PRICE"
       ...extract({
         type: ["HAS_PRICE"],
-        direction: ">",
         extractionFunction: createPrices,
       }),
     ]
@@ -339,9 +289,9 @@ async function findProduct1(props) {
 async function findManufacturer(name) {
   return await mango.findNode(["Manufacturer"], { NAME: name });
 }
-async function findManufacturer1(props) {
-  return await mango.findNode(["Manufacturer"], props);
-}
+// async function findManufacturer1(props) {
+//   return await mango.findNode(["Manufacturer"], props);
+// }
 
 async function bedrocan2() {
   /* Solving Bedrocan Product vs Manufacturer fail */
@@ -374,6 +324,7 @@ async function bedrocan2() {
   async function findNodes(names, fn) {
     return flatten(await Promise.all(names.map(fn)));
   }
+
   const manufacturers = await findNodes(duplicates, findManufacturer);
   // log(manufacturers);
   for await (let manufacturer of manufacturers) {

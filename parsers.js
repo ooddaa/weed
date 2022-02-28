@@ -302,7 +302,7 @@ function formatPrice(str, product) /*: Object */ {
  * @param {*} kb
  * @returns
  */
-function processName(name, kb) /* : String[] | Array<null> */ {
+function disambiguate(name, kb) /* : String[] | Array<null> */ {
   const rv = kb.map(({ preferredName, aliases }) => {
     const matches = [];
     aliases.forEach((alias) => {
@@ -505,5 +505,5 @@ function parseAPI({ thc, cbd }) {
 }
 
 // export default { parsePrice, formatPrice };
-module.exports = { parsePrice, formatPrice, processName, parseAPI };
+module.exports = { parsePrice, formatPrice, disambiguate, parseAPI };
 // module.exports = parsePrice;
