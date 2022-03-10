@@ -22,16 +22,16 @@ const engine = new Engine({
   neo4jPassword: "pass",
   ip: "0.0.0.0",
   port: "7687",
-  database: "neo4j",
+  database: "test",
 });
 
 /* Start Neo4j Driver */
-// engine.startDriver();
+engine.startDriver();
 
 /* Check connection to Neo4j */
-// engine.verifyConnectivity({ database: "neo4j" }).then(log);
+engine.verifyConnectivity({ database: "neo4j" }).then(log);
 
-// const builder = new Builder();
+const builder = new Builder();
 const mango = new Mango({ engine });
 
 function addDispensary(dispensary) {

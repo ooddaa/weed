@@ -141,3 +141,81 @@ node.Manufacturer {
   border-color: #cc3c6c;
   text-color-internal: #FFFFFF;
 }
+node.Dispensary {
+  caption: "{NAME}";
+}
+node.Group {
+  caption: "{NAME}";
+}
+node.Producer|Distributor|Manufacturer|Group|LegalPerson {
+  caption: "{NAME}";
+}
+node.Strain|Hybrid {
+  caption: "{NAME}";
+}
+node.ProductBrand {
+  caption: "{NAME}";
+}
+node.Supplier {
+  caption: "{NAME}";
+}
+node.Dispensary|Clinic|LegalPerson {
+  caption: "{NAME}";
+}
+node.Sativa {
+  caption: "{NAME}";
+}
+node.Manufacturer|LegalPerson|ProductBrand {
+  caption: "{NAME}";
+}
+node.Strain|Indica {
+  caption: "{NAME}";
+}
+node.Indica {
+  caption: "{NAME}";
+}
+node.Hybrid {
+  caption: "{NAME}";
+}
+node.LegalPerson {
+  caption: "{NAME}";
+}
+node.Clinic {
+  caption: "{NAME}";
+}
+node.Pharmacy|LegalPerson {
+  caption: "{NAME}";
+}
+node.Distributor {
+  caption: "{NAME}";
+}
+node.Producer {
+  caption: "{NAME}";
+}
+node.Manufacturer|LegalPerson {
+  caption: "{NAME}";
+}
+node.Price {
+  caption: "{NAME}";
+}
+node.Pharmacy {
+  caption: "{NAME}";
+}
+node.SpecialsManufacturer|Supplier|LegalPerson {
+  caption: "{NAME}";
+}
+node.Strain|UNKNOWN {
+  caption: "{NAME}";
+}
+node.Strain|Sativa {
+  caption: "{NAME}";
+}
+node.Country {
+  caption: "{NAME}";
+}
+node.UNKNOWN {
+  caption: "{name}";
+}
+node.SpecialsManufacturer {
+  caption: "{NAME}";
+}
