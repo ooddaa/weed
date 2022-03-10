@@ -1,1 +1,0 @@
-1. [2022-02-10] I ran into a problem: I have Product names posing as Manufacturer (all from same Manufacturer - Bedrocan). I need to refactor graph so that these nodes are replaced by a unique (Manufacturer { NAME: Bedrocan, ...rest of Node's props })

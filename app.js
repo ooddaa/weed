@@ -1,4 +1,4 @@
-// const { Engine, Builder, log, isFailure, Mango, search } = require("mango");
+/* @flow */
 const {
   Engine,
   Builder,
@@ -6,12 +6,13 @@ const {
   isFailure,
   Mango,
   search,
-} = require("../mango/lib/index.js");
+  not,
+  isNode,
+} = require("manggo");
 const { has, flatten, isArray } = require("lodash");
 const { parsePrice, disambiguate, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
-const { isNode } = require("../mango/lib/Builder/index.js");
 const legalPersons = require("./legalPersons");
 const kb = require("./knowledgeBase.js");
 
@@ -25,13 +26,13 @@ const engine = new Engine({
 });
 
 /* Start Neo4j Driver */
-engine.startDriver();
+// engine.startDriver();
 
 /* Check connection to Neo4j */
-engine.verifyConnectivity({ database: "neo4j" }).then(log);
+// engine.verifyConnectivity({ database: "neo4j" }).then(log);
 
-const builder = new Builder();
-const mango = new Mango({ builder, engine });
+// const builder = new Builder();
+const mango = new Mango({ engine });
 
 function addDispensary(dispensary) {
   return function inner(product) {
@@ -72,7 +73,9 @@ function createStrain(product) /* : Node */ {
  * @param {Object|Node|EnhancedNode} extractFrom
  * @returns {Function}
  */
-function extractPropertyAsRelationshipFrom(extractFrom) {
+function extractPropertyAsRelationshipFrom(
+  extractFrom /* : Object | Node | EnhancedNode */
+) /* : Function */ {
   /**
    * Creates RelationshipCandidate[] for builder.makeEnhancedNode(coreNode, RelationshipCandidate[]).
    * We want to specify how we want to enhance our Node.
@@ -82,7 +85,7 @@ function extractPropertyAsRelationshipFrom(extractFrom) {
   function inner({
     type /* : string|string[] */,
     props /* : Object */,
-    direction /* '>'|'<' */,
+    direction /* '>'|'<' | "outbound"|"inbound" */,
     propToExtract /* : string */,
     extractionFunction /* : Function */,
     labels /* : string[] */,
@@ -119,38 +122,36 @@ function extractPropertyAsRelationshipFrom(extractFrom) {
           rcs.push(
             builder.makeRelationshipCandidate(
               type || ["DEFAULT_REL_TYPE"],
-              props ||
-                {
-                  // DEFAULT_REL_PROP: "created by extractPropertyAsRelationship",
-                },
-              direction == ">" ? "outbound" : "inbound",
-              node
+              node,
+              // DEFAULT_REL_PROP: "created by extractPropertyAsRelationship",
+              props || {},
+              direction == ">" ? "outbound" : "inbound"
             )
           );
         });
     } else {
-      if (isNode(partner) !== true) {
+      if (not(isNode(partner))) {
         throw new Error(
           `extractPropertyAsRelationshipFrom: expected to end up with a partner Node.\npartner: ${JSON.stringify(
             partner
           )}`
         );
       }
+
       rcs.push(
         builder.makeRelationshipCandidate(
           type || ["DEFAULT_REL_TYPE"],
-          props ||
-            {
-              // DEFAULT_REL_PROP: "created by extractPropertyAsRelationship",
-            },
-          direction == ">" ? "outbound" : "inbound",
-          partner
+          partner,
+          // DEFAULT_REL_PROP: "created by extractPropertyAsRelationship",
+          props || {},
+          direction == ">" ? "outbound" : "inbound"
         )
       );
     }
 
     return rcs;
   }
+
   return inner;
 }
 

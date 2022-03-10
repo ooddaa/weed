@@ -1,16 +1,27 @@
 {
   "name": "weed",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Knowledge Graph of UK Medical Cannabis Industry",
   "main": "app.js",
   "scripts": {
     "test": "jest --watch --runInBand"
   },
-  "author": "",
-  "license": "ISC",
+  "repository": "github:ooddaa/weed.git",
+  "author": {
+    "name": "Oda Nabunaga",
+    "email": "ooddaa@gmail.com",
+    "url": "https://ooddaa.co"
+  },
+  "keywords": [
+    "graph",
+    "knowledge graph",
+    "UK",
+    "medical cannabis"
+  ],
+  "license": "MIT",
   "dependencies": {
     "lodash": "^4.17.21",
-    "mango": "git+https://kenguru101@bitbucket.org/kenguru101/mango.git",
+    "manggo": "^1.0.2",
     "node-fetch": "^3.2.0"
   },
   "devDependencies": {
