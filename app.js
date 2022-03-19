@@ -8,7 +8,7 @@ const {
   search,
   not,
   isNode,
-} = require("manggo");
+} = require("mango");
 const { has, flatten, isArray } = require("lodash");
 const { parsePrice, disambiguate, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
@@ -16,37 +16,76 @@ const ipc = require("./datasets/220209_ipc");
 const legalPersons = require("./legalPersons");
 const kb = require("./knowledgeBase.js");
 
-/* Instantiate Engine */
-const engine = new Engine({
-  neo4jUsername: "neo4j",
-  neo4jPassword: "pass",
+const engineConfig = {
+  username: "neo4j",
+  password: "pass",
   ip: "0.0.0.0",
   port: "7687",
   database: "neo4j",
-});
+};
 
-/* Start Neo4j Driver */
-// engine.startDriver();
-
-/* Check connection to Neo4j */
-// engine.verifyConnectivity({ database: "neo4j" }).then(log);
-
-// const builder = new Builder();
-const mango = new Mango({ engine });
+const builder = new Builder();
+const mango = new Mango({ engineConfig });
 
 function addDispensary(dispensary) {
   return function inner(product) {
     return { ...product, dispensary };
   };
 }
+
 /**
  * Merge Enodes
  * @param {*} data
  */
 async function worker(data, dispensary) {
   const enodes = data.map(addDispensary(dispensary)).map(productToEnode);
-  const result = await engine.mergeEnhancedNodes(enodes);
+  const result = await mango.mergeEnhancedNodes(enodes);
+
   return result;
+}
+
+/**
+ * State behavioural pattern
+ */
+class Strain {
+  constructor() {
+    this.state = new UnknownStrain();
+    this.strains = {
+      Sativa,
+      Indica,
+      Hybrid,
+      UnknownStrain,
+    };
+  }
+
+  makeNode() {
+    return this.state.makeNode();
+  }
+
+  changeState(strainName) {
+    this.state = this.strains[strainName] || UnknownStrain;
+  }
+}
+
+class Sativa {
+  makeNode() {
+    return builder.makeNode(["Strain", "Sativa"], { NAME: "Sativa" });
+  }
+}
+class Indica {
+  makeNode() {
+    return builder.makeNode(["Strain", "Indica"], { NAME: "Indica" });
+  }
+}
+class Hybrid {
+  makeNode() {
+    return builder.makeNode(["Strain", "Hybrid"], { NAME: "Hybrid" });
+  }
+}
+class UnknownStrain {
+  makeNode() {
+    return builder.makeNode(["Strain", "UNKNOWN"], { NAME: "UNKNOWN" });
+  }
 }
 
 /**
@@ -65,6 +104,9 @@ function createStrain(product) /* : Node */ {
     default:
       return builder.makeNode(["Strain", "UNKNOWN"], { NAME: "UNKNOWN" });
   }
+}
+function createStrain1(product) /* : Node */ {
+  return new Strain(product["strain"]).makeNode();
 }
 
 /**
@@ -399,7 +441,7 @@ async function addLegalPersons(
   /* or if we consider new props REQUIRED, then we need to recalculate hashes */
   /* we don't really need any more REQUIRED props as long as each Manufacturer is already unique by NAME */
   const enodes = legalPersons.map(legalPersonToEnode);
-  const result = await engine.mergeEnhancedNodes(enodes);
+  const result = await mango.mergeEnhancedNodes(enodes);
   return result;
 }
 
