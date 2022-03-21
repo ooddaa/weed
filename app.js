@@ -8,13 +8,18 @@ const {
   search,
   not,
   isNode,
-} = require("mango");
+// } = require("mango");
+} = require("../mango/lib");
 const { has, flatten, isArray } = require("lodash");
 const { parsePrice, disambiguate, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
 const legalPersons = require("./legalPersons");
-const kb = require("./knowledgeBase.js");
+const knowledgeBase = require("./knowledgeBase.js");
+const strainsKB = require('./strainsKB')
+const Strain = require('./Strain.js');
+
+let kb = knowledgeBase.concat(...strainsKB)
 
 const engineConfig = {
   username: "neo4j",
@@ -44,49 +49,7 @@ async function worker(data, dispensary) {
   return result;
 }
 
-/**
- * State behavioural pattern
- */
-class Strain {
-  constructor() {
-    this.state = new UnknownStrain();
-    this.strains = {
-      Sativa,
-      Indica,
-      Hybrid,
-      UnknownStrain,
-    };
-  }
 
-  makeNode() {
-    return this.state.makeNode();
-  }
-
-  changeState(strainName) {
-    this.state = this.strains[strainName] || UnknownStrain;
-  }
-}
-
-class Sativa {
-  makeNode() {
-    return builder.makeNode(["Strain", "Sativa"], { NAME: "Sativa" });
-  }
-}
-class Indica {
-  makeNode() {
-    return builder.makeNode(["Strain", "Indica"], { NAME: "Indica" });
-  }
-}
-class Hybrid {
-  makeNode() {
-    return builder.makeNode(["Strain", "Hybrid"], { NAME: "Hybrid" });
-  }
-}
-class UnknownStrain {
-  makeNode() {
-    return builder.makeNode(["Strain", "UNKNOWN"], { NAME: "UNKNOWN" });
-  }
-}
 
 /**
  * @TODO mb do signature (product: Object, fn: Function, args: Object)
@@ -106,7 +69,7 @@ function createStrain(product) /* : Node */ {
   }
 }
 function createStrain1(product) /* : Node */ {
-  return new Strain(product["strain"]).makeNode();
+  return new Strain(product["strain"]).makeNode(builder);
 }
 
 /**
@@ -205,7 +168,12 @@ function createManufacturer(product) /* : Node */ {
   // parse 'Khiron THC Rich'
 
   const [name, ...rest] = product["product"].split(" ");
-  const [preferredName] = disambiguate(name, kb); // entity resolution module
+  // bedrolite, bediol, bedrobinol -> Bedrocan - disambiguation
+  //
+  // bedrolite -> Bedrolite <- BEDROLITE - normalization
+  // also can be though of as 'disambiguation'
+  // bedrolite -> Bedrolite <- BEDROLITE
+  const preferredName = disambiguate(name, kb)[0] || name; // entity resolution module
 
   return builder.makeNode(["Manufacturer"], { NAME: preferredName });
 }
@@ -252,8 +220,8 @@ function productToEnode(product, dispensary) /* : EnhancedNode */ {
     builder.makeNode(
       ["Product"],
       {
-        NAME: disambiguate(product.product, kb)[0],
-        FORM: disambiguate(product.form, kb)[0],
+        NAME: disambiguate(product.product, kb)[0] || product.product,
+        FORM: disambiguate(product.form, kb)[0] || product.form,
         THC: thc[1],
         CBD: cbd[1],
         SIZE: product.size,
@@ -422,12 +390,6 @@ function legalPersonToEnode(
         labels: ["Country"], // supply custom labels without specifying extractionFunction
         // extractionFunction: createStrain, // should be optional
       }),
-      // ...extract({
-      //   type: ["FROM_STRAIN"],
-      //   direction: ">",
-      //   propToExtract: "strain",
-      //   extractionFunction: createStrain,
-      // }),
     ]
   );
   return newEnode;

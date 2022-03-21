@@ -1,6 +1,7 @@
 const { disambiguate } = require("../parsers.js");
 const knowledgeBase = require("../knowledgeBase.js");
-
+const strainsKB = require("../strainsKB.js");
+const { log } = require("../stuff");
 const kb = [
   {
     pattern: new RegExp("tilray", "i"),
@@ -54,15 +55,31 @@ describe("create regex patter from name", () => {
     expect(rv).toEqual(names);
   });
   test("disambiguate TILRAY", () => {
-    const rv = disambiguate("TILRAY", kb);
+    const rv = disambiguate("TILRAY", knowledgeBase);
     expect(rv).toEqual(["Tilray"]);
   });
   test("disambiguate ColuMbIa", () => {
-    const rv = disambiguate("ColuMbIa", kb);
+    const rv = disambiguate("ColuMbIa", knowledgeBase);
     expect(rv).toEqual(["Columbia Care"]);
   });
   test("disambiguate ColuMbIa", () => {
-    const rv = disambiguate("ColuMbIa", kb);
+    const rv = disambiguate("ColuMbIa", knowledgeBase);
     expect(rv).toEqual(["Columbia Care"]);
   });
+  
 });
+
+describe('strains', () => {
+  test('sativa', () => {
+    const rv = disambiguate("sativa", strainsKB);
+    expect(rv).toEqual(['Sativa'])
+  })
+  test('empty strain', () => {
+    const rv = disambiguate("", strainsKB);
+    expect(rv).toEqual([])
+  })
+  test('Unknown', () => {
+    const rv = disambiguate("Unknown", strainsKB);
+    expect(rv).toEqual([])
+  })
+})
