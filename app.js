@@ -8,18 +8,22 @@ const {
   search,
   not,
   isNode,
-} = require("mango");
-// } = require("../mango/lib");
+// } = require("mango");
+} = require("../mango/lib");
 const { has, flatten, isArray } = require("lodash");
 const { parsePrice, disambiguate, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
 const legalPersons = require("./legalPersons");
 const knowledgeBase = require("./knowledgeBase.js");
-const strainsKB = require('./strainsKB')
+// const strainsKB = require('./strainsKB')
 const Strain = require('./Strain.js');
+const KnowledgeBase = require('./lib/kb');
 
-let kb = knowledgeBase.concat(...strainsKB)
+
+// let kb = knowledgeBase.concat(...strainsKB)
+const KB = new KnowledgeBase()
+let kb = knowledgeBase.concat(...KB.getStrains());
 
 const engineConfig = {
   username: "neo4j",
