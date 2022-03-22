@@ -1,4 +1,7 @@
 const { log } = require("./stuff");
+const {isString} = require("lodash");
+const { isMissing, stringify } = require("mango");
+
 
 function parsePrice1(str) /*: Object[] */ {
   if (typeof str !== "string") {
@@ -298,11 +301,17 @@ function formatPrice(str, product) /*: Object */ {
 
 /**
  * entity resolution module
- * @param {*} name
- * @param {*} kb
+ * @param {string} name
+ * @param {KnowledgeBase} kb
  * @returns
  */
 function disambiguate(name, kb) /* : String[] | Array<null> */ {
+  if (isMissing(name)) {
+    throw new Error(`disambiguate: name to work with is missing.\n${stringify(name)}`)
+  }
+  if (isString(name) && name.length == 0) {
+    return []
+  }
   const rv = kb.map(({ preferredName, aliases }) => {
     const matches = [];
     aliases.forEach((alias) => {
@@ -317,7 +326,7 @@ function disambiguate(name, kb) /* : String[] | Array<null> */ {
   });
   const result = rv.filter((x) => x);
   if (result.length == 0) {
-    return [name];
+    return [];
   } else {
     return result;
   }

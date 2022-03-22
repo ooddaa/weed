@@ -7,7 +7,7 @@ module.exports = [
   {
     pattern: new RegExp("aurora", "i"),
     preferredName: "Aurora",
-    aliases: ["Aurora", "PEDANIOS"],
+    aliases: ["Aurora", "AURORA"],
   },
   {
     pattern: new RegExp("columbia", "i"),
@@ -40,8 +40,13 @@ module.exports = [
     aliases: ["bedica"],
   },
   {
-    // pattern: new RegExp("oil", "i"),
+    pattern: new RegExp("oil", "i"),
     preferredName: "Oil",
     aliases: ["oil", "full spectrum oil"],
+  },
+  {
+    pattern: new RegExp("pedanios", "i"),
+    preferredName: "Pedanios",
+    aliases: ["Pedanios", "PEDANIOS"],
   },
 ];
