@@ -15,15 +15,10 @@ const { parsePrice, disambiguate, parseAPI } = require("./parsers.js");
 const dg = require("./datasets/220209_dg");
 const ipc = require("./datasets/220209_ipc");
 const legalPersons = require("./legalPersons");
-const knowledgeBase = require("./knowledgeBase.js");
-// const strainsKB = require('./strainsKB')
 const Strain = require('./Strain.js');
-const KnowledgeBase = require('./lib/kb');
+const KnowledgeBase = require('./lib/knowledgeBase');
 
-
-// let kb = knowledgeBase.concat(...strainsKB)
-const KB = new KnowledgeBase()
-let kb = knowledgeBase.concat(...KB.getStrains());
+const kb = new KnowledgeBase();
 
 const engineConfig = {
   username: "neo4j",
@@ -159,7 +154,8 @@ function createManufacturer(product) /* : Node */ {
   // bedrolite -> Bedrolite <- BEDROLITE - normalization
   // also can be though of as 'disambiguation'
   // bedrolite -> Bedrolite <- BEDROLITE
-  const preferredName = disambiguate(name, kb)[0] || name; // entity resolution module
+  const preferredName = disambiguate(name, kb.getBedrocan())[0] || name; // entity resolution module
+  // const preferredName = disambiguate(name, kb)[0] || name; // entity resolution module
 
   return builder.makeNode(["Manufacturer"], { NAME: preferredName });
 }
@@ -206,8 +202,10 @@ function productToEnode(product, dispensary) /* : EnhancedNode */ {
     builder.makeNode(
       ["Product"],
       {
-        NAME: disambiguate(product.product, kb)[0] || product.product,
-        FORM: disambiguate(product.form, kb)[0] || product.form,
+        NAME: disambiguate(product.product, kb.getMain().concat())[0] || product.product,
+        // NAME: disambiguate(product.product, kb)[0] || product.product,
+        FORM: disambiguate(product.form, kb.getMain())[0] || product.form,
+        // FORM: disambiguate(product.form, kb)[0] || product.form,
         THC: thc[1],
         CBD: cbd[1],
         SIZE: product.size,

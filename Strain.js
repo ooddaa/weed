@@ -1,6 +1,6 @@
 const { log } = require('mango')
 const { disambiguate } = require('./parsers')
-const strainsKB = require('./strainsKB')
+const strainsKB = require('./knowledge/strains')
 
 /**
  * State behavioural pattern

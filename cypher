@@ -1,3 +1,4 @@
+// 19 products only in IPS
 match (ips:Dispensary where ips.NAME contains 'IPS')
 match (dg:Dispensary where dg.NAME contains 'Green')
 match (p:Product) 
